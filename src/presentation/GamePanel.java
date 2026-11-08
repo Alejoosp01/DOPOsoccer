@@ -15,6 +15,7 @@ import java.awt.Shape;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.InputEvent;
+import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.geom.Arc2D;
 import java.awt.geom.Ellipse2D;
@@ -51,7 +52,6 @@ import domain.Winner;
  * Panel de juego: dibuja la cancha con Java2D, ejecuta el bucle de simulacion
  * y traduce el teclado en acciones para los controladores humanos.
  */
-@SuppressWarnings("serial")
 public final class GamePanel extends JPanel implements ActionListener {
 
     private static final long serialVersionUID = 1L;
@@ -187,12 +187,12 @@ public final class GamePanel extends JPanel implements ActionListener {
                 controller.requestKick();
             }
         });
-        // La tecla Control llega con CTRL_DOWN_MASK en modifiersEx, por eso
-        // no se puede enlazar como una tecla normal sin modificadores.
-        bind(KeyEvent.VK_CONTROL, InputEvent.CTRL_DOWN_MASK, "rightPower", false, () -> {
-            HumanController controller = rightHuman();
-            if (controller != null) {
-                controller.requestPower();
+        // El poder del jugador 2 es SOLO Ctrl derecho. Un KeyStroke no sabe si el
+        // Ctrl es el izquierdo o el derecho; el KeyEvent si (getKeyLocation).
+        addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent event) {
+                handleRightControl(event);
             }
         });
 
@@ -207,6 +207,25 @@ public final class GamePanel extends JPanel implements ActionListener {
         bindPress(KeyEvent.VK_ENTER, "rematchEnter", this::rematch);
     }
 
+    /**
+     * Pide el poder del jugador 2 solo si la tecla es el Ctrl DERECHO.
+     */
+    void handleRightControl(KeyEvent event) {
+        if (event.getKeyCode() != KeyEvent.VK_CONTROL) {
+            return;
+        }
+        if (event.getKeyLocation() != KeyEvent.KEY_LOCATION_RIGHT) {
+            return;
+        }
+        HumanController controller = rightHuman();
+        if (controller != null) {
+            controller.requestPower();
+        }
+    }
+
+    /**
+     * Pausa o reanuda la partida y recupera el foco del teclado.
+     */
     private void togglePause() {
         if (session.isFinished()) {
             return;
@@ -214,6 +233,7 @@ public final class GamePanel extends JPanel implements ActionListener {
         session.togglePause();
         accumulator = 0;
         clearInput();
+        requestFocusInWindow();
         repaint();
     }
 
@@ -830,7 +850,7 @@ public final class GamePanel extends JPanel implements ActionListener {
 
         drawPowerBar(g2, match.getLeftPlayer(), true);
         drawPowerBar(g2, match.getRightPlayer(), false);
-        drawBottomHints(g2, match);
+        drawBottomHints(g2);
     }
 
     private String matchSubtitle(Match match) {
@@ -1000,7 +1020,7 @@ public final class GamePanel extends JPanel implements ActionListener {
     /**
      * Dibuja en el centro de la franja inferior la modalidad y las teclas de pausa.
      */
-    private void drawBottomHints(Graphics2D g2, Match match) {
+    private void drawBottomHints(Graphics2D g2) {
         GameMode mode = session.getConfig().getGameMode();
         String text;
         if (session.isSurvival()) {
@@ -1173,11 +1193,6 @@ public final class GamePanel extends JPanel implements ActionListener {
             return "JUGADOR 1";
         }
         return "JUGADOR 2";
-    }
-
-    private void drawCentered(Graphics2D g2, String text, int centerX, int baselineY, Color color) {
-        g2.setColor(color);
-        drawCentered(g2, text, centerX, baselineY);
     }
 
     private void drawCentered(Graphics2D g2, String text, int centerX, int baselineY) {

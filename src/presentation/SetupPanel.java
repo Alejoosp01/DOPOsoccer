@@ -34,7 +34,6 @@ import domain.POOBSoccerException;
  * Pantalla de configuracion: modalidad, forma de terminar, regla del partido
  * y el personaje de cada lado, elegido con tarjetas.
  */
-@SuppressWarnings("serial")
 public final class SetupPanel extends JPanel {
 
     private static final long serialVersionUID = 1L;

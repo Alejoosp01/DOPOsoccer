@@ -15,7 +15,6 @@ import javax.swing.SwingConstants;
 /**
  * Menu principal del juego.
  */
-@SuppressWarnings("serial")
 public final class MainMenuPanel extends JPanel {
 
     private static final long serialVersionUID = 1L;

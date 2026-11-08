@@ -47,10 +47,17 @@ public class MatchConfig {
      * Partido a goles: gana quien llegue primero al objetivo.
      */
     public static MatchConfig goals(GameMode gameMode, int target) {
-        if (target < 1) {
-            throw new IllegalArgumentException("El objetivo de goles debe ser positivo");
+        if (!isValidGoalTarget(target)) {
+            throw new IllegalArgumentException("El objetivo de goles debe ser 3, 5 o 7");
         }
         return new MatchConfig(gameMode, MatchType.GOALS, 0, target, 0);
+    }
+
+    /**
+     * Devuelve si la meta de goles es una de las que permite el enunciado: 3, 5 o 7.
+     */
+    public static boolean isValidGoalTarget(int target) {
+        return target == 3 || target == 5 || target == 7;
     }
 
     /**

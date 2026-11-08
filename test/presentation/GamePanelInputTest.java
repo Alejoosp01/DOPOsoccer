@@ -50,19 +50,46 @@ public class GamePanelInputTest {
         return panel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).get(stroke);
     }
 
-    @Test
-    public void shouldBindControlWithControlModifier() {
-        KeyStroke stroke = KeyStroke.getKeyStroke(
-                KeyEvent.VK_CONTROL, InputEvent.CTRL_DOWN_MASK, false);
-
-        assertEquals("rightPower.pressed", actionFor(stroke));
+    private KeyEvent controlPressed(int location) {
+        return new KeyEvent(panel, KeyEvent.KEY_PRESSED, 0, InputEvent.CTRL_DOWN_MASK,
+                KeyEvent.VK_CONTROL, KeyEvent.CHAR_UNDEFINED, location);
     }
 
     @Test
-    public void shouldBindControlLikeASwingControlStroke() {
-        assertEquals(actionFor(KeyStroke.getKeyStroke("control CONTROL")),
-                actionFor(KeyStroke.getKeyStroke(
-                        KeyEvent.VK_CONTROL, InputEvent.CTRL_DOWN_MASK, false)));
+    public void shouldRequestRightPowerWithRightControl() {
+        HumanController right = (HumanController) session.getRightController();
+
+        panel.handleRightControl(controlPressed(KeyEvent.KEY_LOCATION_RIGHT));
+
+        assertTrue(right.isPowerRequested());
+    }
+
+    @Test
+    public void shouldIgnoreLeftControl() {
+        HumanController left = (HumanController) session.getLeftController();
+        HumanController right = (HumanController) session.getRightController();
+
+        panel.handleRightControl(controlPressed(KeyEvent.KEY_LOCATION_LEFT));
+
+        assertFalse(right.isPowerRequested());
+        assertFalse(left.isPowerRequested());
+    }
+
+    @Test
+    public void shouldNotBindControlAsKeyStroke() {
+        KeyStroke stroke = KeyStroke.getKeyStroke(
+                KeyEvent.VK_CONTROL, InputEvent.CTRL_DOWN_MASK, false);
+
+        assertNull(actionFor(stroke));
+    }
+
+    @Test
+    public void shouldRegisterKeyListenerForRightControl() {
+        HumanController right = (HumanController) session.getRightController();
+
+        panel.getKeyListeners()[0].keyPressed(controlPressed(KeyEvent.KEY_LOCATION_RIGHT));
+
+        assertTrue(right.isPowerRequested());
     }
 
     @Test

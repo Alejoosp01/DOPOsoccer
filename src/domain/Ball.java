@@ -68,7 +68,7 @@ public class Ball {
         x += velocityX * dt;
         y += velocityY * dt;
 
-        bounceOnCeiling(field);
+        bounceOnCeiling();
         bounceOnGround(field);
         bounceOnLeftSide(field);
         bounceOnRightSide(field);
@@ -101,7 +101,10 @@ public class Ball {
         return new Rectangle2D.Double(x - radius, y - radius, radius * 2, radius * 2);
     }
 
-    private void bounceOnCeiling(Field field) {
+    /**
+     * Rebota el balon contra el techo de la cancha (y = 0).
+     */
+    private void bounceOnCeiling() {
         if (y - radius < 0) {
             y = radius;
             if (velocityY < 0) {
