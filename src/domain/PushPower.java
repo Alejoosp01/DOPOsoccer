@@ -32,4 +32,20 @@ public class PushPower extends Power {
             ball.releasePush();
         }
     }
+
+    /**
+     * El Empuje deja el balon cargado y reacciona cuando lo toca el rival.
+     */
+    @Override
+    public boolean reactsToOpponentTouch() {
+        return true;
+    }
+
+    /**
+     * Aplica el Empuje al rival que toca el balon cargado.
+     */
+    @Override
+    public void onBallTouch(Ball ball, Player owner, Player opponent) {
+        hit(ball, opponent);
+    }
 }

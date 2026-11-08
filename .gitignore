@@ -42,6 +42,7 @@ local.properties
 .vscode/
 *.code-workspace
 .history/
+.DopoSoccer/
 
 # ---------- IntelliJ (por si algun companero lo abre) ----------
 .idea/

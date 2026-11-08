@@ -20,6 +20,20 @@ public abstract class Power {
     public abstract void activate(Ball ball, Player owner, Player opponent);
 
     /**
+     * Se llama cuando el rival toca un balon que quedo cargado por este poder.
+     * Por defecto no hace nada; los poderes que dejan el balon cargado lo sobrescriben.
+     */
+    public void onBallTouch(Ball ball, Player owner, Player opponent) {
+    }
+
+    /**
+     * Devuelve si este poder reacciona cuando el rival toca el balon cargado.
+     */
+    public boolean reactsToOpponentTouch() {
+        return false;
+    }
+
+    /**
      * Devuelve el nombre del poder.
      */
     public String getName() {
