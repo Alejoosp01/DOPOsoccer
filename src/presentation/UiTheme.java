@@ -11,6 +11,14 @@ import javax.swing.JLabel;
 import javax.swing.JSpinner;
 import javax.swing.JTextField;
 
+import domain.ConfusionPower;
+import domain.FreezePower;
+import domain.GameCharacter;
+import domain.IllusionPower;
+import domain.Power;
+import domain.PushPower;
+import domain.ShrinkPower;
+
 /**
  * Colores, fuentes y utilidades de dibujo compartidas por la interfaz.
  */
@@ -30,28 +38,108 @@ public final class UiTheme {
     public static final Color LEFT_COLOR = new Color(231, 76, 60);
     public static final Color RIGHT_COLOR = new Color(52, 152, 219);
     public static final Color ICE = new Color(150, 225, 255);
+    public static final Color GRASS_LIGHT = new Color(64, 150, 74);
+    public static final Color GRASS_DARK = new Color(50, 128, 62);
+    public static final Color HUD_BAND = new Color(14, 21, 35);
+
+    public static final String FONT_FAMILY = "SansSerif";
 
     private UiTheme() {
     }
 
+    /**
+     * Devuelve una fuente de la familia del juego con el estilo y tamano indicados.
+     */
+    public static Font font(int style, int size) {
+        return new Font(FONT_FAMILY, style, size);
+    }
+
+    /**
+     * Devuelve el color principal de la camiseta de un pais.
+     */
+    public static Color countryPrimary(GameCharacter character) {
+        String name = character.getCountry().getName();
+        if ("Corea del Sur".equals(name)) {
+            return new Color(205, 48, 62);
+        }
+        if ("Estados Unidos".equals(name)) {
+            return new Color(58, 64, 122);
+        }
+        if ("Canada".equals(name)) {
+            return new Color(214, 45, 34);
+        }
+        if ("Colombia".equals(name)) {
+            return new Color(250, 205, 25);
+        }
+        if ("Brasil".equals(name)) {
+            return new Color(255, 220, 0);
+        }
+        return new Color(120, 140, 170);
+    }
+
+    /**
+     * Devuelve el color secundario (franjas) de un pais.
+     */
+    public static Color countrySecondary(GameCharacter character) {
+        String name = character.getCountry().getName();
+        if ("Corea del Sur".equals(name)) {
+            return new Color(0, 55, 125);
+        }
+        if ("Estados Unidos".equals(name)) {
+            return new Color(178, 34, 52);
+        }
+        if ("Canada".equals(name)) {
+            return new Color(246, 248, 252);
+        }
+        if ("Colombia".equals(name)) {
+            return new Color(0, 56, 147);
+        }
+        if ("Brasil".equals(name)) {
+            return new Color(0, 156, 59);
+        }
+        return new Color(60, 76, 100);
+    }
+
+    /**
+     * Devuelve una frase corta que explica que hace un poder.
+     */
+    public static String powerDescription(Power power) {
+        if (power instanceof PushPower) {
+            return "Tiro recto muy rapido: empuja y aturde al rival que lo toque";
+        }
+        if (power instanceof IllusionPower) {
+            return "El balon se divide en 8; el real atraviesa al rival";
+        }
+        if (power instanceof FreezePower) {
+            return "Congela al rival en un bloque de hielo";
+        }
+        if (power instanceof ShrinkPower) {
+            return "Encoge al rival a un tamano diminuto";
+        }
+        if (power instanceof ConfusionPower) {
+            return "Invierte los controles de movimiento del rival";
+        }
+        return "";
+    }
+
     public static Font titleFont() {
-        return new Font("SansSerif", Font.BOLD, 58);
+        return new Font(FONT_FAMILY, Font.BOLD, 58);
     }
 
     public static Font headingFont() {
-        return new Font("SansSerif", Font.BOLD, 30);
+        return new Font(FONT_FAMILY, Font.BOLD, 30);
     }
 
     public static Font subtitleFont() {
-        return new Font("SansSerif", Font.BOLD, 18);
+        return new Font(FONT_FAMILY, Font.BOLD, 18);
     }
 
     public static Font bodyFont() {
-        return new Font("SansSerif", Font.PLAIN, 15);
+        return new Font(FONT_FAMILY, Font.PLAIN, 15);
     }
 
     public static Font smallFont() {
-        return new Font("SansSerif", Font.BOLD, 12);
+        return new Font(FONT_FAMILY, Font.BOLD, 12);
     }
 
     public static JLabel label(String text, Font font, Color color) {

@@ -21,7 +21,7 @@ public final class MenuButton extends JButton {
     public MenuButton(String text, Color baseColor) {
         super(text);
         this.baseColor = baseColor;
-        setFont(new Font("SansSerif", Font.BOLD, 18));
+        setFont(UiTheme.font(Font.BOLD, 18));
         setForeground(UiTheme.BG_TOP);
         setContentAreaFilled(false);
         setFocusPainted(false);

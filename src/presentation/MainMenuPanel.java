@@ -9,7 +9,6 @@ import java.awt.geom.Point2D;
 
 import javax.swing.Box;
 import javax.swing.BoxLayout;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 
@@ -98,28 +97,12 @@ public final class MainMenuPanel extends JPanel {
         add(footer, BorderLayout.SOUTH);
     }
 
+    /**
+     * Abre la ventana "Como jugar" con los colores del juego.
+     */
     private void showHelp() {
-        String message = "<html><body style='width:420px;font-family:SansSerif'>"
-                + "<h2>Como jugar</h2>"
-                + "<p>Elige modalidad, forma de terminar y un pais para cada lado.</p>"
-                + "<h3>Jugador 1 (izquierda)</h3>"
-                + "<p><b>A / D</b> mover &nbsp; <b>W</b> saltar &nbsp; "
-                + "<b>S</b> patear &nbsp; <b>Q</b> poder</p>"
-                + "<h3>Jugador 2 (derecha)</h3>"
-                + "<p><b>Flechas</b> mover y saltar &nbsp; <b>Abajo</b> patear &nbsp; "
-                + "<b>Ctrl</b> poder</p>"
-                + "<h3>Partida</h3>"
-                + "<p><b>ESC</b> pausa &nbsp; <b>R</b> revancha al terminar &nbsp; "
-                + "<b>M</b> volver al menu</p>"
-                + "<h3>Poderes</h3>"
-                + "<p>La barra se llena en 10 segundos. Al presionar la tecla de poder queda "
-                + "armado y se activa con el siguiente golpe al balon.</p>"
-                + "<p><b>Congelacion</b> (Canada), <b>Reduccion</b> (Colombia), "
-                + "<b>Confusion</b> (Brasil), <b>Empuje</b> (Corea del Sur) e "
-                + "<b>Ilusion</b> (Estados Unidos).</p>"
-                + "</body></html>";
-        JOptionPane.showMessageDialog(this, message, "Como jugar",
-                JOptionPane.INFORMATION_MESSAGE);
+        HelpDialog dialog = new HelpDialog(this);
+        dialog.setVisible(true);
     }
 
     @Override

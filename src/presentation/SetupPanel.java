@@ -2,7 +2,6 @@ package presentation;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
@@ -17,17 +16,12 @@ import java.util.ArrayList;
 import java.util.function.Consumer;
 
 import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
-import javax.swing.DefaultListCellRenderer;
-import javax.swing.JComboBox;
 import javax.swing.JLabel;
-import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JRadioButton;
-import javax.swing.JSpinner;
-import javax.swing.SpinnerNumberModel;
-import javax.swing.SwingConstants;
 
 import domain.CharacterCatalog;
 import domain.GameCharacter;
@@ -37,39 +31,42 @@ import domain.MatchType;
 import domain.POOBSoccerException;
 
 /**
- * Pantalla de configuracion: modalidad, forma de terminar, valor de la regla
- * y personajes de cada lado.
+ * Pantalla de configuracion: modalidad, forma de terminar, regla del partido
+ * y el personaje de cada lado, elegido con tarjetas.
  */
 @SuppressWarnings("serial")
 public final class SetupPanel extends JPanel {
 
     private static final long serialVersionUID = 1L;
 
-    private final Consumer<GameSetup> onStart;
-    private final Runnable onBack;
+    public static final int SURVIVAL_BALLS = 3;
+    private static final int[] GOAL_TARGETS = {3, 5, 7};
 
-    private final JRadioButton pvpOption = new JRadioButton("1 vs 1 (dos jugadores)");
-    private final JRadioButton pvmOption = new JRadioButton("Humano vs Maquina");
-    private final JRadioButton mvmOption = new JRadioButton("Maquina vs Maquina");
+    private final transient Consumer<GameSetup> onStart;
+    private final transient Runnable onBack;
 
-    private final JRadioButton timeOption = new JRadioButton("Por tiempo");
-    private final JRadioButton goalsOption = new JRadioButton("Por goles");
-    private final JRadioButton survivalOption = new JRadioButton("Supervivencia");
+    private final ChoiceChip pvpOption = new ChoiceChip("Jugador vs Jugador");
+    private final ChoiceChip pvmOption = new ChoiceChip("Jugador vs Maquina");
+    private final ChoiceChip mvmOption = new ChoiceChip("Maquina vs Maquina");
 
-    private final JLabel valueLabel = UiTheme.label("Duracion (segundos)",
-            UiTheme.subtitleFont(), UiTheme.TEXT);
-    private final JSpinner valueSpinner = new JSpinner(new SpinnerNumberModel(60, 15, 180, 5));
-    private final JLabel hintLabel = UiTheme.label(" ",
-            UiTheme.bodyFont(), UiTheme.MUTED);
+    private final ChoiceChip timeOption = new ChoiceChip("Por tiempo");
+    private final ChoiceChip goalsOption = new ChoiceChip("Por goles");
+    private final ChoiceChip survivalOption = new ChoiceChip("Supervivencia");
 
-    private final ArrayList<GameCharacter> characters;
-    private final JComboBox<GameCharacter> leftBox = new JComboBox<GameCharacter>();
-    private final JComboBox<GameCharacter> rightBox = new JComboBox<GameCharacter>();
+    private final ChoiceChip[] goalOptions = new ChoiceChip[GOAL_TARGETS.length];
 
-    private MatchType currentType = MatchType.TIME;
-    private int timeValue = 60;
-    private int goalsValue = 3;
-    private int ballsValue = 5;
+    private final JLabel ruleLabel = UiTheme.label("Duracion", UiTheme.subtitleFont(), UiTheme.TEXT);
+    private final JPanel rulePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+    private final JLabel ruleInfo = UiTheme.label(" ", UiTheme.bodyFont(), UiTheme.MUTED);
+
+    private final JLabel leftTitle = UiTheme.label(" ", UiTheme.font(Font.BOLD, 16), UiTheme.LEFT_COLOR);
+    private final JLabel rightTitle = UiTheme.label(" ", UiTheme.font(Font.BOLD, 16), UiTheme.RIGHT_COLOR);
+    private final JLabel leftDetail = UiTheme.label(" ", UiTheme.bodyFont(), UiTheme.MUTED);
+    private final JLabel rightDetail = UiTheme.label(" ", UiTheme.bodyFont(), UiTheme.MUTED);
+
+    private final transient ArrayList<GameCharacter> characters;
+    private final ArrayList<CharacterCard> leftCards = new ArrayList<CharacterCard>();
+    private final ArrayList<CharacterCard> rightCards = new ArrayList<CharacterCard>();
 
     public SetupPanel(Consumer<GameSetup> onStart, Runnable onBack) {
         this.onStart = onStart;
@@ -81,6 +78,9 @@ public final class SetupPanel extends JPanel {
         buildInterface();
     }
 
+    /**
+     * Carga los personajes del catalogo; si falla devuelve una lista vacia.
+     */
     private ArrayList<GameCharacter> loadCharacters() {
         try {
             return CharacterCatalog.createCharacters();
@@ -89,85 +89,35 @@ public final class SetupPanel extends JPanel {
         }
     }
 
+    /**
+     * Arma la pantalla: encabezado, opciones del partido, tarjetas y botones.
+     */
     private void buildInterface() {
         JPanel header = new JPanel();
         header.setOpaque(false);
-        header.setLayout(new javax.swing.BoxLayout(header, javax.swing.BoxLayout.Y_AXIS));
-
+        header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
         JLabel title = UiTheme.label("CONFIGURAR PARTIDA", UiTheme.headingFont(), UiTheme.TEXT);
         title.setAlignmentX(CENTER_ALIGNMENT);
         JLabel subtitle = UiTheme.label("Elige como se juega y quien entra a la cancha",
                 UiTheme.bodyFont(), UiTheme.MUTED);
         subtitle.setAlignmentX(CENTER_ALIGNMENT);
         header.add(title);
-        header.add(javax.swing.Box.createVerticalStrut(4));
+        header.add(Box.createVerticalStrut(2));
         header.add(subtitle);
-        header.setBorder(BorderFactory.createEmptyBorder(26, 0, 10, 0));
+        header.setBorder(BorderFactory.createEmptyBorder(16, 0, 8, 0));
         add(header, BorderLayout.NORTH);
 
-        JPanel form = new JPanel(new GridBagLayout());
-        form.setOpaque(false);
-        GridBagConstraints labelConstraints = new GridBagConstraints();
-        labelConstraints.gridx = 0;
-        labelConstraints.anchor = GridBagConstraints.LINE_END;
-        labelConstraints.insets = new Insets(9, 0, 9, 22);
-        GridBagConstraints fieldConstraints = new GridBagConstraints();
-        fieldConstraints.gridx = 1;
-        fieldConstraints.weightx = 1;
-        fieldConstraints.fill = GridBagConstraints.HORIZONTAL;
-        fieldConstraints.anchor = GridBagConstraints.LINE_START;
-        fieldConstraints.insets = new Insets(9, 0, 9, 0);
+        JPanel content = new JPanel();
+        content.setOpaque(false);
+        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
+        content.add(buildOptions());
+        content.add(Box.createVerticalStrut(2));
+        content.add(buildPlayerSection(leftTitle, leftCards, leftDetail, UiTheme.LEFT_COLOR));
+        content.add(Box.createVerticalStrut(12));
+        content.add(buildPlayerSection(rightTitle, rightCards, rightDetail, UiTheme.RIGHT_COLOR));
+        add(content, BorderLayout.CENTER);
 
-        styleRadio(pvpOption);
-        styleRadio(pvmOption);
-        styleRadio(mvmOption);
-        ButtonGroup modeGroup = new ButtonGroup();
-        modeGroup.add(pvpOption);
-        modeGroup.add(pvmOption);
-        modeGroup.add(mvmOption);
-        pvmOption.setSelected(true);
-
-        styleRadio(timeOption);
-        styleRadio(goalsOption);
-        styleRadio(survivalOption);
-        ButtonGroup typeGroup = new ButtonGroup();
-        typeGroup.add(timeOption);
-        typeGroup.add(goalsOption);
-        typeGroup.add(survivalOption);
-        timeOption.setSelected(true);
-
-        timeOption.addActionListener(event -> applyTypeChange());
-        goalsOption.addActionListener(event -> applyTypeChange());
-        survivalOption.addActionListener(event -> applyTypeChange());
-
-        UiTheme.styleSpinner(valueSpinner);
-        valueSpinner.setPreferredSize(new Dimension(150, 34));
-
-        addRow(form, labelConstraints, fieldConstraints, 0, "Modalidad",
-                row(pvpOption, pvmOption, mvmOption));
-        addRow(form, labelConstraints, fieldConstraints, 1, "Forma de terminar",
-                row(timeOption, goalsOption, survivalOption));
-        addRow(form, labelConstraints, fieldConstraints, 2, valueLabel,
-                valueSpinner);
-        addRow(form, labelConstraints, fieldConstraints, 3, "Jugador 1 (izquierda)",
-                createCharacterBox(leftBox));
-        addRow(form, labelConstraints, fieldConstraints, 4, "Jugador 2 (derecha)",
-                createCharacterBox(rightBox));
-
-        GridBagConstraints hintConstraints = new GridBagConstraints();
-        hintConstraints.gridx = 0;
-        hintConstraints.gridy = 5;
-        hintConstraints.gridwidth = 2;
-        hintConstraints.insets = new Insets(10, 0, 0, 0);
-        hintConstraints.anchor = GridBagConstraints.CENTER;
-        form.add(hintLabel, hintConstraints);
-
-        JPanel formWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        formWrapper.setOpaque(false);
-        formWrapper.add(form);
-        add(formWrapper, BorderLayout.CENTER);
-
-        JPanel footer = new JPanel(new FlowLayout(FlowLayout.CENTER, 18, 22));
+        JPanel footer = new JPanel(new FlowLayout(FlowLayout.CENTER, 18, 12));
         footer.setOpaque(false);
         MenuButton back = new MenuButton("VOLVER", UiTheme.PANEL_LIGHT);
         back.setForeground(UiTheme.TEXT);
@@ -178,108 +128,224 @@ public final class SetupPanel extends JPanel {
         footer.add(start);
         add(footer, BorderLayout.SOUTH);
 
-        populateCharacters();
-    }
-
-    private void populateCharacters() {
-        for (GameCharacter character : characters) {
-            leftBox.addItem(character);
-            rightBox.addItem(character);
-        }
-        if (characters.size() > 2) {
-            leftBox.setSelectedIndex(2);
-        }
-        if (characters.size() > 4) {
-            rightBox.setSelectedIndex(4);
-        } else if (characters.size() > 1) {
-            rightBox.setSelectedIndex(1);
-        }
-    }
-
-    private JComboBox<GameCharacter> createCharacterBox(JComboBox<GameCharacter> box) {
-        box.setFont(UiTheme.bodyFont());
-        box.setBackground(UiTheme.PANEL_LIGHT);
-        box.setForeground(UiTheme.TEXT);
-        box.setPreferredSize(new Dimension(660, 34));
-        box.setBorder(BorderFactory.createLineBorder(UiTheme.BORDER, 1));
-        box.setRenderer(new CharacterRenderer());
-        return box;
-    }
-
-    private JPanel row(Component... components) {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 18, 0));
-        panel.setOpaque(false);
-        for (Component component : components) {
-            panel.add(component);
-        }
-        return panel;
-    }
-
-    private void addRow(JPanel form, GridBagConstraints labelConstraints,
-                        GridBagConstraints fieldConstraints, int row, String label,
-                        Component component) {
-        addRow(form, labelConstraints, fieldConstraints, row,
-                UiTheme.label(label, UiTheme.subtitleFont(), UiTheme.TEXT), component);
-    }
-
-    private void addRow(JPanel form, GridBagConstraints labelConstraints,
-                        GridBagConstraints fieldConstraints, int row, JLabel label,
-                        Component component) {
-        labelConstraints.gridy = row;
-        fieldConstraints.gridy = row;
-        form.add(label, labelConstraints);
-        form.add(component, fieldConstraints);
-    }
-
-    private void styleRadio(JRadioButton button) {
-        button.setOpaque(false);
-        button.setForeground(UiTheme.TEXT);
-        button.setFont(UiTheme.bodyFont());
-        button.setFocusPainted(false);
+        selectCard(leftCards, 2);
+        selectCard(rightCards, 4);
+        applyModeChange();
+        applyTypeChange();
     }
 
     /**
-     * Guarda el valor de la regla anterior y cambia el modelo del spinner.
+     * Crea las tres filas de opciones: modalidad, forma de terminar y regla.
+     */
+    private JPanel buildOptions() {
+        ButtonGroup modeGroup = new ButtonGroup();
+        modeGroup.add(pvpOption);
+        modeGroup.add(pvmOption);
+        modeGroup.add(mvmOption);
+        pvmOption.setSelected(true);
+        pvpOption.addActionListener(event -> applyModeChange());
+        pvmOption.addActionListener(event -> applyModeChange());
+        mvmOption.addActionListener(event -> applyModeChange());
+
+        ButtonGroup typeGroup = new ButtonGroup();
+        typeGroup.add(timeOption);
+        typeGroup.add(goalsOption);
+        typeGroup.add(survivalOption);
+        timeOption.setSelected(true);
+        timeOption.addActionListener(event -> applyTypeChange());
+        goalsOption.addActionListener(event -> applyTypeChange());
+        survivalOption.addActionListener(event -> applyTypeChange());
+
+        ButtonGroup goalGroup = new ButtonGroup();
+        for (int i = 0; i < GOAL_TARGETS.length; i++) {
+            goalOptions[i] = new ChoiceChip(String.valueOf(GOAL_TARGETS[i]));
+            goalGroup.add(goalOptions[i]);
+        }
+        goalOptions[0].setSelected(true);
+        rulePanel.setOpaque(false);
+        ruleInfo.setBorder(BorderFactory.createEmptyBorder(9, 4, 0, 0));
+
+        JPanel options = new JPanel(new GridBagLayout());
+        options.setOpaque(false);
+        addOptionRow(options, 0, UiTheme.label("Modalidad", UiTheme.subtitleFont(), UiTheme.TEXT),
+                chipRow(pvpOption, pvmOption, mvmOption));
+        addOptionRow(options, 1, UiTheme.label("Forma de terminar", UiTheme.subtitleFont(), UiTheme.TEXT),
+                chipRow(timeOption, goalsOption, survivalOption));
+        addOptionRow(options, 2, ruleLabel, rulePanel);
+
+        JPanel wrapper = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        wrapper.setOpaque(false);
+        wrapper.add(options);
+        return wrapper;
+    }
+
+    /**
+     * Agrega una fila con su titulo a la derecha y sus opciones a la izquierda.
+     */
+    private void addOptionRow(JPanel options, int row, JLabel label, JPanel field) {
+        GridBagConstraints labelConstraints = new GridBagConstraints();
+        labelConstraints.gridx = 0;
+        labelConstraints.gridy = row;
+        labelConstraints.anchor = GridBagConstraints.LINE_END;
+        labelConstraints.insets = new Insets(5, 0, 5, 20);
+        GridBagConstraints fieldConstraints = new GridBagConstraints();
+        fieldConstraints.gridx = 1;
+        fieldConstraints.gridy = row;
+        fieldConstraints.anchor = GridBagConstraints.LINE_START;
+        fieldConstraints.insets = new Insets(5, 0, 5, 0);
+        label.setPreferredSize(new Dimension(190, 38));
+        label.setHorizontalAlignment(JLabel.RIGHT);
+        field.setPreferredSize(new Dimension(620, 38));
+        options.add(label, labelConstraints);
+        options.add(field, fieldConstraints);
+    }
+
+    /**
+     * Devuelve una fila horizontal con las pastillas indicadas.
+     */
+    private JPanel chipRow(ChoiceChip first, ChoiceChip second, ChoiceChip third) {
+        JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        row.setOpaque(false);
+        row.add(first);
+        row.add(second);
+        row.add(third);
+        return row;
+    }
+
+    /**
+     * Crea la seccion de un jugador: titulo, fila de tarjetas y detalle del poder.
+     */
+    private JPanel buildPlayerSection(JLabel title, ArrayList<CharacterCard> cards,
+                                      JLabel detail, Color sideColor) {
+        JPanel section = new JPanel();
+        section.setOpaque(false);
+        section.setLayout(new BoxLayout(section, BoxLayout.Y_AXIS));
+
+        JPanel titleRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        titleRow.setOpaque(false);
+        titleRow.setMaximumSize(new Dimension(1108, 24));
+        titleRow.add(title);
+
+        JPanel cardRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 4));
+        cardRow.setOpaque(false);
+        ButtonGroup group = new ButtonGroup();
+        for (GameCharacter character : characters) {
+            CharacterCard card = new CharacterCard(character, sideColor);
+            card.addActionListener(event -> updateDetails());
+            group.add(card);
+            cards.add(card);
+            cardRow.add(card);
+        }
+
+        JPanel detailRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        detailRow.setOpaque(false);
+        detailRow.setMaximumSize(new Dimension(1108, 22));
+        detailRow.add(detail);
+
+        section.add(titleRow);
+        section.add(cardRow);
+        section.add(detailRow);
+        return section;
+    }
+
+    /**
+     * Marca la tarjeta de la posicion indicada si existe.
+     */
+    private void selectCard(ArrayList<CharacterCard> cards, int index) {
+        if (cards.isEmpty()) {
+            return;
+        }
+        if (index >= cards.size()) {
+            index = cards.size() - 1;
+        }
+        cards.get(index).setSelected(true);
+        updateDetails();
+    }
+
+    /**
+     * Devuelve el personaje de la tarjeta marcada, o null si no hay ninguna.
+     */
+    private GameCharacter selectedCharacter(ArrayList<CharacterCard> cards) {
+        for (CharacterCard card : cards) {
+            if (card.isSelected()) {
+                return card.getCharacter();
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Escribe debajo de cada fila de tarjetas que hace el poder elegido.
+     */
+    private void updateDetails() {
+        leftDetail.setText(detailText(selectedCharacter(leftCards)));
+        rightDetail.setText(detailText(selectedCharacter(rightCards)));
+    }
+
+    /**
+     * Devuelve el texto de detalle de un personaje: su poder y lo que hace.
+     */
+    private String detailText(GameCharacter character) {
+        if (character == null) {
+            return " ";
+        }
+        return character.getName() + "  -  " + character.getPower().getName() + ": "
+                + UiTheme.powerDescription(character.getPower());
+    }
+
+    /**
+     * Cambia los titulos de cada lado segun quien juega: humano o maquina.
+     */
+    private void applyModeChange() {
+        GameMode mode = selectedMode();
+        if (mode == GameMode.MVM) {
+            leftTitle.setText("MAQUINA  (IZQUIERDA)");
+        } else {
+            leftTitle.setText("JUGADOR 1  (IZQUIERDA)   A / D / W / S  +  Q poder");
+        }
+        if (mode == GameMode.PVP) {
+            rightTitle.setText("JUGADOR 2  (DERECHA)   Flechas  +  Ctrl derecho poder");
+        } else {
+            rightTitle.setText("MAQUINA  (DERECHA)");
+        }
+    }
+
+    /**
+     * Cambia la fila de la regla segun la forma de terminar elegida.
+     * La supervivencia solo se permite en Jugador vs Maquina.
      */
     private void applyTypeChange() {
-        saveCurrentValue();
-        MatchType next = selectedType();
-        currentType = next;
-        SpinnerNumberModel model;
-        if (next == MatchType.GOALS) {
-            valueLabel.setText("Goles para ganar");
-            model = new SpinnerNumberModel(goalsValue, 1, 15, 1);
-        } else if (next == MatchType.SURVIVAL) {
-            valueLabel.setText("Balones por lado");
-            model = new SpinnerNumberModel(ballsValue, 1, 10, 1);
+        MatchType type = selectedType();
+        rulePanel.removeAll();
+        if (type == MatchType.GOALS) {
+            ruleLabel.setText("Goles para ganar");
+            for (ChoiceChip option : goalOptions) {
+                rulePanel.add(option);
+            }
+        } else if (type == MatchType.SURVIVAL) {
+            ruleLabel.setText("Balones");
+            ruleInfo.setText(SURVIVAL_BALLS + " balones por lado  |  serie de partidos contra la maquina");
+            rulePanel.add(ruleInfo);
         } else {
-            valueLabel.setText("Duracion (segundos)");
-            model = new SpinnerNumberModel(timeValue, 15, 180, 5);
+            ruleLabel.setText("Duracion");
+            ruleInfo.setText("60 segundos  |  si terminan empatados se juega gol de oro");
+            rulePanel.add(ruleInfo);
         }
-        valueSpinner.setModel(model);
 
-        boolean survival = next == MatchType.SURVIVAL;
+        boolean survival = type == MatchType.SURVIVAL;
         pvpOption.setEnabled(!survival);
         mvmOption.setEnabled(!survival);
         if (survival) {
             pvmOption.setSelected(true);
-            hintLabel.setText("Supervivencia: humano a la izquierda vs maquina a la derecha.");
-        } else {
-            hintLabel.setText(" ");
+            applyModeChange();
         }
+        rulePanel.revalidate();
+        rulePanel.repaint();
     }
 
-    private void saveCurrentValue() {
-        int value = (Integer) valueSpinner.getValue();
-        if (currentType == MatchType.TIME) {
-            timeValue = value;
-        } else if (currentType == MatchType.GOALS) {
-            goalsValue = value;
-        } else {
-            ballsValue = value;
-        }
-    }
-
+    /**
+     * Devuelve la forma de terminar elegida.
+     */
     private MatchType selectedType() {
         if (goalsOption.isSelected()) {
             return MatchType.GOALS;
@@ -290,6 +356,9 @@ public final class SetupPanel extends JPanel {
         return MatchType.TIME;
     }
 
+    /**
+     * Devuelve la modalidad elegida.
+     */
     private GameMode selectedMode() {
         if (pvpOption.isSelected()) {
             return GameMode.PVP;
@@ -300,29 +369,45 @@ public final class SetupPanel extends JPanel {
         return GameMode.PVM;
     }
 
+    /**
+     * Devuelve la meta de goles elegida (3, 5 o 7).
+     */
+    private int selectedGoalTarget() {
+        for (int i = 0; i < goalOptions.length; i++) {
+            if (goalOptions[i].isSelected()) {
+                return GOAL_TARGETS[i];
+            }
+        }
+        return GOAL_TARGETS[0];
+    }
+
+    /**
+     * Crea la configuracion con lo elegido y avisa que se puede empezar.
+     */
     private void startGame() {
-        GameCharacter left = (GameCharacter) leftBox.getSelectedItem();
-        GameCharacter right = (GameCharacter) rightBox.getSelectedItem();
+        GameCharacter left = selectedCharacter(leftCards);
+        GameCharacter right = selectedCharacter(rightCards);
         if (left == null || right == null) {
             JOptionPane.showMessageDialog(this,
-                    "No se pudieron cargar los personajes.",
-                    "Error", JOptionPane.ERROR_MESSAGE);
+                    "Elige un personaje para cada lado.",
+                    "Falta un personaje", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        saveCurrentValue();
-        int value = (Integer) valueSpinner.getValue();
         MatchType type = selectedType();
         MatchConfig config;
         if (type == MatchType.GOALS) {
-            config = MatchConfig.goals(selectedMode(), value);
+            config = MatchConfig.goals(selectedMode(), selectedGoalTarget());
         } else if (type == MatchType.SURVIVAL) {
-            config = MatchConfig.survival(value);
+            config = MatchConfig.survival(SURVIVAL_BALLS);
         } else {
-            config = MatchConfig.time(selectedMode(), value);
+            config = MatchConfig.time(selectedMode());
         }
         onStart.accept(new GameSetup(config, left, right));
     }
 
+    /**
+     * Pinta el fondo con el degradado y los circulos decorativos del tema.
+     */
     @Override
     protected void paintComponent(Graphics graphics) {
         super.paintComponent(graphics);
@@ -344,39 +429,5 @@ public final class SetupPanel extends JPanel {
         g2.setColor(UiTheme.withAlpha(UiTheme.LEFT_COLOR, 16));
         g2.fillOval(getWidth() - 420, 160, 620, 620);
         g2.dispose();
-    }
-
-    /**
-     * Renderer que muestra nombre, estadisticas y poder de cada personaje.
-     */
-    private static class CharacterRenderer extends DefaultListCellRenderer {
-
-        private static final long serialVersionUID = 1L;
-
-        @Override
-        public Component getListCellRendererComponent(JList<?> list, Object value,
-                                                      int index, boolean selected,
-                                                      boolean hasFocus) {
-            super.getListCellRendererComponent(list, value, index, selected, hasFocus);
-            if (value instanceof GameCharacter) {
-                GameCharacter character = (GameCharacter) value;
-                setText(character.getName()
-                        + "   |   Vel " + character.getSpeed()
-                        + "   Salto " + character.getJump()
-                        + "   Fuerza " + character.getStrength()
-                        + "   |   " + character.getPower().getName());
-            }
-            setFont(UiTheme.bodyFont());
-            if (selected) {
-                setBackground(UiTheme.ACCENT_DARK);
-                setForeground(Color.WHITE);
-            } else {
-                setBackground(UiTheme.PANEL_LIGHT);
-                setForeground(UiTheme.TEXT);
-            }
-            setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 8));
-            setHorizontalAlignment(SwingConstants.LEFT);
-            return this;
-        }
     }
 }

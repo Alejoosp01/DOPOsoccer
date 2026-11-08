@@ -35,7 +35,6 @@ import javax.swing.Timer;
 
 import domain.Ball;
 import domain.Field;
-import domain.GameCharacter;
 import domain.GameMode;
 import domain.Goal;
 import domain.HumanController;
@@ -59,6 +58,8 @@ public final class GamePanel extends JPanel implements ActionListener {
     private static final double STEP = 1.0 / 120.0;
     private static final long MAX_FRAME_NANOS = 250_000_000L;
     private static final int TIMER_DELAY = 16;
+    private static final int STANDS_BOTTOM = 290;
+    private static final int BOARDS_HEIGHT = 28;
 
     private final GameSession session;
     private final Runnable onMenu;
@@ -111,10 +112,13 @@ public final class GamePanel extends JPanel implements ActionListener {
             new Color(154, 196, 120), new Color(220, 220, 230), new Color(172, 118, 208)
         };
         Random random = new Random(20261108L);
-        for (int i = 0; i < 190; i++) {
-            int x = 18 + random.nextInt(1244);
-            int y = 24 + random.nextInt(104);
-            int size = 3 + random.nextInt(4);
+        for (int i = 0; i < 520; i++) {
+            int x = 10 + random.nextInt(1260);
+            int y = 22 + random.nextInt(258);
+            if (y > 142 && y < 162) {
+                continue;
+            }
+            int size = 4 + random.nextInt(4);
             crowd.add(new CrowdDot(x, y, size, palette[random.nextInt(palette.length)]));
         }
     }
@@ -416,79 +420,96 @@ public final class GamePanel extends JPanel implements ActionListener {
         g2.dispose();
     }
 
+    /**
+     * Dibuja el estadio: cielo nocturno, dos tribunas con publico y reflectores.
+     */
     private void drawBackground(Graphics2D g2) {
         UiTheme.paintVerticalGradient(g2, getWidth(), getHeight(),
                 UiTheme.BG_TOP, UiTheme.BG_BOTTOM);
 
-        g2.setColor(new Color(13, 21, 36));
-        g2.fillRect(0, 0, getWidth(), 150);
+        g2.setPaint(new GradientPaint(0, 0, new Color(18, 27, 45),
+                0, STANDS_BOTTOM, new Color(26, 38, 60)));
+        g2.fillRect(0, 0, getWidth(), STANDS_BOTTOM);
+        g2.setColor(new Color(10, 16, 28));
+        g2.fillRect(0, 144, getWidth(), 16);
+        g2.setColor(UiTheme.withAlpha(Color.WHITE, 18));
+        g2.fillRect(0, 144, getWidth(), 2);
+
         for (CrowdDot dot : crowd) {
-            g2.setColor(UiTheme.withAlpha(dot.color, 150));
+            g2.setColor(UiTheme.withAlpha(dot.color, 175));
             g2.fillOval(dot.x, dot.y, dot.size, dot.size);
         }
-        g2.setColor(new Color(8, 13, 24));
-        g2.fillRect(0, 140, getWidth(), 14);
 
         g2.setPaint(new RadialGradientPaint(
-                new Point2D.Double(getWidth() * 0.18, -30),
-                520,
+                new Point2D.Double(getWidth() * 0.18, -40),
+                560,
                 new float[] {0f, 1f},
-                new Color[] {UiTheme.withAlpha(UiTheme.GOLD, 42),
-                        UiTheme.withAlpha(UiTheme.GOLD, 0)}));
-        g2.fillRect(0, 0, getWidth() / 2, 430);
+                new Color[] {UiTheme.withAlpha(new Color(255, 244, 214), 32),
+                        UiTheme.withAlpha(new Color(255, 244, 214), 0)}));
+        g2.fillRect(0, 0, getWidth() / 2, STANDS_BOTTOM + 200);
         g2.setPaint(new RadialGradientPaint(
-                new Point2D.Double(getWidth() * 0.82, -30),
-                520,
+                new Point2D.Double(getWidth() * 0.82, -40),
+                560,
                 new float[] {0f, 1f},
-                new Color[] {UiTheme.withAlpha(UiTheme.RIGHT_COLOR, 42),
-                        UiTheme.withAlpha(UiTheme.RIGHT_COLOR, 0)}));
-        g2.fillRect(getWidth() / 2, 0, getWidth() / 2, 430);
+                new Color[] {UiTheme.withAlpha(new Color(255, 244, 214), 32),
+                        UiTheme.withAlpha(new Color(255, 244, 214), 0)}));
+        g2.fillRect(getWidth() / 2, 0, getWidth() / 2, STANDS_BOTTOM + 200);
     }
 
+    /**
+     * Dibuja las vallas publicitarias, el pasto con franjas y la franja del HUD.
+     */
     private void drawArena(Graphics2D g2, Field field) {
         int width = getWidth();
         int ground = (int) field.getGroundY();
-        g2.setPaint(new GradientPaint(0, 150, new Color(19, 42, 43),
-                0, ground, new Color(11, 24, 28)));
-        g2.fillRect(0, 154, width, ground - 154);
 
-        g2.setColor(UiTheme.withAlpha(Color.WHITE, 10));
-        for (int y = 200; y < ground; y += 56) {
-            g2.drawLine(0, y, width, y);
+        g2.setColor(new Color(12, 18, 31));
+        g2.fillRect(0, STANDS_BOTTOM, width, BOARDS_HEIGHT);
+        g2.setFont(UiTheme.font(Font.BOLD, 15));
+        for (int x = 0; x < width; x += 320) {
+            g2.setColor(new Color(22, 34, 56));
+            g2.fillRect(x + 4, STANDS_BOTTOM + 4, 312, BOARDS_HEIGHT - 8);
+            g2.setColor(UiTheme.withAlpha(UiTheme.ACCENT, 170));
+            drawCentered(g2, "POOB SOCCER  2026-2", x + 160, STANDS_BOTTOM + 20);
         }
+
+        int grassTop = STANDS_BOTTOM + BOARDS_HEIGHT;
+        boolean light = true;
         for (int x = 0; x < width; x += 80) {
-            g2.drawLine(x, 154, x, ground);
+            if (light) {
+                g2.setColor(UiTheme.GRASS_LIGHT);
+            } else {
+                g2.setColor(UiTheme.GRASS_DARK);
+            }
+            g2.fillRect(x, grassTop, 80, ground - grassTop);
+            light = !light;
         }
+        g2.setPaint(new GradientPaint(0, grassTop, UiTheme.withAlpha(Color.BLACK, 110),
+                0, ground, UiTheme.withAlpha(Color.BLACK, 0)));
+        g2.fillRect(0, grassTop, width, ground - grassTop);
 
-        int cx = width / 2;
-        g2.setColor(UiTheme.withAlpha(Color.WHITE, 14));
-        g2.setStroke(new BasicStroke(3));
-        g2.drawOval(cx - 170, 300, 340, 340);
-        g2.drawOval(cx - 90, 380, 180, 180);
-        g2.setFont(new Font("SansSerif", Font.BOLD, 42));
-        drawCentered(g2, "POOB", cx, 448, UiTheme.withAlpha(Color.WHITE, 18));
-
-        g2.setPaint(new GradientPaint(0, ground, new Color(40, 112, 62),
-                0, getHeight(), new Color(19, 62, 40)));
+        g2.setPaint(new GradientPaint(0, ground, UiTheme.HUD_BAND,
+                0, getHeight(), UiTheme.BG_TOP));
         g2.fillRect(0, ground, width, getHeight() - ground);
-        for (int x = 0; x < width; x += 96) {
-            g2.setColor(UiTheme.withAlpha(Color.BLACK, 22));
-            g2.fillRect(x, ground, 48, getHeight() - ground);
-        }
-        g2.setColor(UiTheme.withAlpha(Color.WHITE, 130));
+        g2.setColor(UiTheme.withAlpha(Color.WHITE, 200));
         g2.fillRect(0, ground, width, 3);
     }
 
+    /**
+     * Dibuja las lineas de la cancha: linea central, circulo central y lineas de gol.
+     */
     private void drawMarkings(Graphics2D g2, Field field) {
         int ground = (int) field.getGroundY();
         int cx = getWidth() / 2;
+        int grassTop = STANDS_BOTTOM + BOARDS_HEIGHT;
 
-        g2.setColor(UiTheme.withAlpha(Color.WHITE, 50));
-        g2.setStroke(new BasicStroke(2));
-        g2.drawLine(cx, 170, cx, ground);
-        g2.drawOval(cx - 115, ground + 18, 230, 42);
+        g2.setColor(UiTheme.withAlpha(Color.WHITE, 120));
+        g2.setStroke(new BasicStroke(3));
+        g2.drawLine(cx, grassTop, cx, ground);
+        g2.drawOval(cx - 170, ground - 70, 340, 64);
+        g2.fillOval(cx - 5, ground - 43, 10, 6);
 
-        g2.setColor(UiTheme.withAlpha(Color.WHITE, 85));
+        g2.setColor(UiTheme.withAlpha(Color.WHITE, 140));
         g2.setStroke(new BasicStroke(3));
         g2.drawLine((int) field.getLeftGoalLineX(), (int) field.getLeftGoal().getY(),
                 (int) field.getLeftGoalLineX(), ground);
@@ -534,8 +555,8 @@ public final class GamePanel extends JPanel implements ActionListener {
         double cx = player.getX();
         double ground = session.getField().getGroundY();
         Color sideColor = left ? UiTheme.LEFT_COLOR : UiTheme.RIGHT_COLOR;
-        Color primary = characterPrimary(player.getCharacter());
-        Color secondary = characterSecondary(player.getCharacter());
+        Color primary = UiTheme.countryPrimary(player.getCharacter());
+        Color secondary = UiTheme.countrySecondary(player.getCharacter());
 
         g2.setColor(new Color(0, 0, 0, 80));
         g2.fillOval((int) (cx - bounds.width * 0.62), (int) (ground - 10),
@@ -780,26 +801,25 @@ public final class GamePanel extends JPanel implements ActionListener {
         g2.setStroke(new BasicStroke(2f));
         g2.draw(new RoundRectangle2D.Double(boardX, boardY, boardWidth, boardHeight, 22, 22));
 
-        g2.setFont(new Font("SansSerif", Font.BOLD, 17));
+        g2.setFont(UiTheme.font(Font.BOLD, 17));
         g2.setColor(UiTheme.LEFT_COLOR);
         g2.drawString(session.getLeftCharacter().getName().toUpperCase(), boardX + 22, boardY + 30);
         g2.setColor(UiTheme.RIGHT_COLOR);
         drawRight(g2, session.getRightCharacter().getName().toUpperCase(),
                 boardX + boardWidth - 22, boardY + 30);
 
-        g2.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        g2.setFont(UiTheme.font(Font.PLAIN, 12));
         g2.setColor(UiTheme.MUTED);
-        g2.drawString(session.getLeftCharacter().getPower().getName(), boardX + 22, boardY + 49);
-        drawRight(g2, session.getRightCharacter().getPower().getName(),
-                boardX + boardWidth - 22, boardY + 49);
+        g2.drawString(roleLabel(true), boardX + 22, boardY + 49);
+        drawRight(g2, roleLabel(false), boardX + boardWidth - 22, boardY + 49);
 
-        g2.setFont(new Font("SansSerif", Font.BOLD, 46));
+        g2.setFont(UiTheme.font(Font.BOLD, 46));
         g2.setColor(UiTheme.TEXT);
         drawCentered(g2, score.getLeftGoals() + "  -  " + score.getRightGoals(),
                 getWidth() / 2, boardY + 56);
 
         String subtitle = matchSubtitle(match);
-        g2.setFont(new Font("SansSerif", Font.BOLD, 13));
+        g2.setFont(UiTheme.font(Font.BOLD, 13));
         g2.setColor(match.isGoldenGoal() ? UiTheme.GOLD : UiTheme.MUTED);
         drawCentered(g2, subtitle, getWidth() / 2, boardY + 82);
 
@@ -838,7 +858,7 @@ public final class GamePanel extends JPanel implements ActionListener {
         int x = left ? 34 : getWidth() - 34;
         int y = 44;
         drawBallIcon(g2, x, y, 11);
-        g2.setFont(new Font("SansSerif", Font.BOLD, 22));
+        g2.setFont(UiTheme.font(Font.BOLD, 22));
         g2.setColor(left ? UiTheme.LEFT_COLOR : UiTheme.RIGHT_COLOR);
         String text = "x " + remaining;
         if (left) {
@@ -857,21 +877,34 @@ public final class GamePanel extends JPanel implements ActionListener {
         g2.draw(new Ellipse2D.Double(x - radius, y - radius, radius * 2, radius * 2));
     }
 
+    /**
+     * Dibuja la barra de poder de un jugador con su poder y los efectos que sufre.
+     */
     private void drawPowerBar(Graphics2D g2, Player player, boolean left) {
-        int barWidth = 310;
-        int barHeight = 18;
+        int barWidth = 300;
+        int barHeight = 20;
         int x = left ? 36 : getWidth() - 36 - barWidth;
-        int y = getHeight() - 62;
+        int y = getHeight() - 40;
         Color color = left ? UiTheme.LEFT_COLOR : UiTheme.RIGHT_COLOR;
 
-        g2.setFont(new Font("SansSerif", Font.BOLD, 13));
+        g2.setFont(UiTheme.font(Font.BOLD, 13));
         g2.setColor(UiTheme.TEXT);
-        String label = player.getCharacter().getName() + "  |  "
-                + player.getCharacter().getPower().getName();
+        String label = "PODER  " + player.getCharacter().getPower().getName().toUpperCase();
         if (left) {
-            g2.drawString(label, x, y - 8);
+            g2.drawString(label, x, y - 9);
         } else {
-            drawRight(g2, label, x + barWidth, y - 8);
+            drawRight(g2, label, x + barWidth, y - 9);
+        }
+
+        String effects = effectsLabel(player);
+        if (!effects.isEmpty()) {
+            g2.setFont(UiTheme.font(Font.BOLD, 12));
+            g2.setColor(UiTheme.ICE);
+            if (left) {
+                drawRight(g2, effects, x + barWidth, y - 9);
+            } else {
+                g2.drawString(effects, x, y - 9);
+            }
         }
 
         g2.setColor(UiTheme.withAlpha(UiTheme.PANEL, 230));
@@ -883,8 +916,12 @@ public final class GamePanel extends JPanel implements ActionListener {
         double charge = Math.max(0, Math.min(1, player.getPowerCharge()));
         if (charge > 0) {
             double fillWidth = Math.max(4, (barWidth - 4) * charge);
-            g2.setPaint(new GradientPaint((float) x, 0, UiTheme.darken(color, 0.18f),
-                    (float) (x + barWidth), 0, UiTheme.lighten(color, 0.28f)));
+            Color fillColor = color;
+            if (player.isPowerReady()) {
+                fillColor = UiTheme.GOLD;
+            }
+            g2.setPaint(new GradientPaint((float) x, 0, UiTheme.darken(fillColor, 0.18f),
+                    (float) (x + barWidth), 0, UiTheme.lighten(fillColor, 0.28f)));
             g2.fill(new RoundRectangle2D.Double(x + 2, y + 2, fillWidth, barHeight - 4, 9, 9));
         }
 
@@ -902,57 +939,86 @@ public final class GamePanel extends JPanel implements ActionListener {
                     barWidth + 4, barHeight + 4, 14, 14));
         }
 
-        g2.setFont(new Font("SansSerif", Font.BOLD, 11));
+        g2.setFont(UiTheme.font(Font.BOLD, 11));
         g2.setColor(UiTheme.TEXT);
-        boolean human = left ? leftHuman() != null : rightHuman() != null;
+        boolean human;
+        if (left) {
+            human = leftHuman() != null;
+        } else {
+            human = rightHuman() != null;
+        }
         String status;
         if (player.isPowerArmed()) {
             status = "ARMADO - GOLPEA EL BALON";
         } else if (player.isPowerReady()) {
             if (!human) {
                 status = "LISTO";
+            } else if (left) {
+                status = "LISTO - PRESIONA Q";
             } else {
-                status = left ? "LISTO - PRESIONA Q" : "LISTO - PRESIONA CTRL";
+                status = "LISTO - PRESIONA CTRL DER.";
             }
         } else {
             status = (int) Math.round(charge * 100) + "%";
         }
-        drawCentered(g2, status, x + barWidth / 2, y + 13);
-
-        g2.setFont(new Font("SansSerif", Font.PLAIN, 12));
-        g2.setColor(UiTheme.MUTED);
-        String hint;
-        if (!human) {
-            hint = "MAQUINA";
-        } else if (left) {
-            hint = "A/D mover   W saltar   S patear   Q poder";
-        } else {
-            hint = "Flechas mover   Arriba saltar   Abajo patear   Ctrl poder";
+        if (player.isPowerReady()) {
+            g2.setColor(UiTheme.BG_TOP);
         }
-        if (left) {
-            g2.drawString(hint, x, getHeight() - 16);
-        } else {
-            drawRight(g2, hint, x + barWidth, getHeight() - 16);
-        }
+        drawCentered(g2, status, x + barWidth / 2, y + 14);
     }
 
+    /**
+     * Devuelve los efectos que sufre el jugador, por ejemplo "CONGELADO".
+     */
+    private String effectsLabel(Player player) {
+        String text = "";
+        if (player.isFrozen()) {
+            text = addEffect(text, "CONGELADO");
+        }
+        if (player.isStunned()) {
+            text = addEffect(text, "ATURDIDO");
+        }
+        if (player.isShrunk()) {
+            text = addEffect(text, "ENCOGIDO");
+        }
+        if (player.isConfused()) {
+            text = addEffect(text, "CONFUNDIDO");
+        }
+        return text;
+    }
+
+    /**
+     * Agrega un efecto al texto separandolo con una barra.
+     */
+    private String addEffect(String text, String effect) {
+        if (text.isEmpty()) {
+            return effect;
+        }
+        return text + "  |  " + effect;
+    }
+
+    /**
+     * Dibuja en el centro de la franja inferior la modalidad y las teclas de pausa.
+     */
     private void drawBottomHints(Graphics2D g2, Match match) {
         GameMode mode = session.getConfig().getGameMode();
         String text;
         if (session.isSurvival()) {
             text = "SUPERVIVENCIA";
         } else if (mode == GameMode.PVP) {
-            text = "1 VS 1";
+            text = "JUGADOR VS JUGADOR";
         } else if (mode == GameMode.PVM) {
-            text = "HUMANO VS MAQUINA";
+            text = "JUGADOR VS MAQUINA";
         } else {
             text = "MAQUINA VS MAQUINA";
         }
-        g2.setFont(new Font("SansSerif", Font.BOLD, 12));
-        g2.setColor(UiTheme.withAlpha(UiTheme.MUTED, 190));
-        drawCentered(g2, text, getWidth() / 2, getHeight() - 16);
+        g2.setFont(UiTheme.font(Font.BOLD, 13));
+        g2.setColor(UiTheme.TEXT);
+        drawCentered(g2, text, getWidth() / 2, getHeight() - 42);
         if (!session.isFinished()) {
-            drawCentered(g2, "ESC pausa   M menu", getWidth() / 2, getHeight() - 32);
+            g2.setFont(UiTheme.font(Font.PLAIN, 12));
+            g2.setColor(UiTheme.MUTED);
+            drawCentered(g2, "ESC pausa   |   M menu", getWidth() / 2, getHeight() - 20);
         }
     }
 
@@ -972,7 +1038,7 @@ public final class GamePanel extends JPanel implements ActionListener {
         }
         Composite old = g2.getComposite();
         g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
-        g2.setFont(new Font("SansSerif", Font.BOLD, 62));
+        g2.setFont(UiTheme.font(Font.BOLD, 62));
         FontMetrics metrics = g2.getFontMetrics();
         int x = (getWidth() - metrics.stringWidth(banner)) / 2;
         int y = 258;
@@ -997,14 +1063,14 @@ public final class GamePanel extends JPanel implements ActionListener {
         g2.setStroke(new BasicStroke(2f));
         g2.draw(new RoundRectangle2D.Double(x, y, width, height, 26, 26));
 
-        g2.setFont(new Font("SansSerif", Font.BOLD, 44));
+        g2.setFont(UiTheme.font(Font.BOLD, 44));
         g2.setColor(UiTheme.TEXT);
         drawCentered(g2, "PAUSA", getWidth() / 2, y + 66);
-        g2.setFont(new Font("SansSerif", Font.BOLD, 17));
+        g2.setFont(UiTheme.font(Font.BOLD, 17));
         g2.setColor(UiTheme.MUTED);
         drawCentered(g2, "ESC / P  continuar", getWidth() / 2, y + 118);
         drawCentered(g2, "M  volver al menu", getWidth() / 2, y + 150);
-        g2.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        g2.setFont(UiTheme.font(Font.PLAIN, 13));
         g2.setColor(UiTheme.withAlpha(UiTheme.MUTED, 190));
         drawCentered(g2, "La partida queda exactamente donde la dejaste",
                 getWidth() / 2, y + 190);
@@ -1026,23 +1092,30 @@ public final class GamePanel extends JPanel implements ActionListener {
         g2.setColor(UiTheme.withAlpha(UiTheme.GOLD, 200));
         g2.fill(new RoundRectangle2D.Double(x + width * 0.3, y + 20, width * 0.4, 4, 4, 4));
 
-        g2.setFont(new Font("SansSerif", Font.BOLD, 14));
+        String header = "PARTIDO TERMINADO";
+        if (session.isSurvival()) {
+            header = "SERIE DE SUPERVIVENCIA";
+        } else if (session.getWinner() == Winner.LEFT) {
+            header = header + "   |   " + roleLabel(true);
+        } else if (session.getWinner() == Winner.RIGHT) {
+            header = header + "   |   " + roleLabel(false);
+        }
+        g2.setFont(UiTheme.font(Font.BOLD, 14));
         g2.setColor(UiTheme.GOLD);
-        drawCentered(g2, session.isSurvival() ? "SERIE DE SUPERVIVENCIA" : "PARTIDO TERMINADO",
-                getWidth() / 2, y + 58);
+        drawCentered(g2, header, getWidth() / 2, y + 58);
 
-        g2.setFont(new Font("SansSerif", Font.BOLD, 40));
+        g2.setFont(UiTheme.font(Font.BOLD, 40));
         g2.setColor(UiTheme.TEXT);
         drawCentered(g2, resultTitle(), getWidth() / 2, y + 112);
 
         if (match != null) {
-            g2.setFont(new Font("SansSerif", Font.BOLD, 56));
+            g2.setFont(UiTheme.font(Font.BOLD, 56));
             g2.setColor(UiTheme.GOLD);
             drawCentered(g2, match.getScore().getLeftGoals() + "  -  "
                     + match.getScore().getRightGoals(), getWidth() / 2, y + 182);
         }
 
-        g2.setFont(new Font("SansSerif", Font.BOLD, 17));
+        g2.setFont(UiTheme.font(Font.BOLD, 17));
         g2.setColor(UiTheme.MUTED);
         if (session.isSurvival()) {
             drawCentered(g2, "Rondas ganadas: " + session.getRoundsWon(),
@@ -1057,15 +1130,18 @@ public final class GamePanel extends JPanel implements ActionListener {
                     getWidth() / 2, y + 256);
         }
 
-        g2.setFont(new Font("SansSerif", Font.BOLD, 16));
+        g2.setFont(UiTheme.font(Font.BOLD, 16));
         g2.setColor(UiTheme.TEXT);
         drawCentered(g2, "R / ENTER  revancha          M  menu", getWidth() / 2, y + 326);
-        g2.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        g2.setFont(UiTheme.font(Font.PLAIN, 12));
         g2.setColor(UiTheme.withAlpha(UiTheme.MUTED, 180));
         drawCentered(g2, "La revancha conserva la misma configuracion",
                 getWidth() / 2, y + 350);
     }
 
+    /**
+     * Devuelve el titulo del resultado con el pais ganador.
+     */
     private String resultTitle() {
         Winner winner = session.getWinner();
         if (session.isSurvival()) {
@@ -1074,54 +1150,29 @@ public final class GamePanel extends JPanel implements ActionListener {
         if (winner == Winner.NONE) {
             return "EMPATE";
         }
-        GameMode mode = session.getConfig().getGameMode();
-        if (mode == GameMode.PVP) {
-            return winner == Winner.LEFT ? "GANA JUGADOR 1" : "GANA JUGADOR 2";
+        if (winner == Winner.LEFT) {
+            return "GANA " + session.getLeftCharacter().getName().toUpperCase();
         }
-        if (mode == GameMode.PVM) {
-            return winner == Winner.LEFT ? "GANASTE" : "GANO LA MAQUINA";
-        }
-        return winner == Winner.LEFT ? "GANA MAQUINA IZQUIERDA" : "GANA MAQUINA DERECHA";
+        return "GANA " + session.getRightCharacter().getName().toUpperCase();
     }
 
-    private Color characterPrimary(GameCharacter character) {
-        String name = character.getName();
-        if ("Corea del Sur".equals(name)) {
-            return new Color(205, 48, 62);
+    /**
+     * Devuelve quien controla un lado: jugador 1, jugador 2 o maquina.
+     */
+    private String roleLabel(boolean left) {
+        HumanController human;
+        if (left) {
+            human = leftHuman();
+        } else {
+            human = rightHuman();
         }
-        if ("Estados Unidos".equals(name)) {
-            return new Color(58, 64, 122);
+        if (human == null) {
+            return "MAQUINA";
         }
-        if ("Canada".equals(name)) {
-            return new Color(214, 45, 34);
+        if (left) {
+            return "JUGADOR 1";
         }
-        if ("Colombia".equals(name)) {
-            return new Color(250, 205, 25);
-        }
-        if ("Brasil".equals(name)) {
-            return new Color(255, 220, 0);
-        }
-        return new Color(120, 140, 170);
-    }
-
-    private Color characterSecondary(GameCharacter character) {
-        String name = character.getName();
-        if ("Corea del Sur".equals(name)) {
-            return new Color(0, 55, 125);
-        }
-        if ("Estados Unidos".equals(name)) {
-            return new Color(178, 34, 52);
-        }
-        if ("Canada".equals(name)) {
-            return new Color(246, 248, 252);
-        }
-        if ("Colombia".equals(name)) {
-            return new Color(0, 56, 147);
-        }
-        if ("Brasil".equals(name)) {
-            return new Color(0, 156, 59);
-        }
-        return new Color(60, 76, 100);
+        return "JUGADOR 2";
     }
 
     private void drawCentered(Graphics2D g2, String text, int centerX, int baselineY, Color color) {
