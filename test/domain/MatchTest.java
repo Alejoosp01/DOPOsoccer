@@ -124,9 +124,16 @@ public class MatchTest {
 
     @Test
     public void shouldFinishWhenGoalTargetIsReached() {
-        Match match = createMatch(MatchConfig.goals(GameMode.PVP, 1));
+        Match match = createMatch(MatchConfig.goals(GameMode.PVP, 3));
         match.start();
+        for (int i = 0; i < 2; i++) {
+            scoreInLeftGoal(match);
+            assertEquals(Winner.NONE, match.getWinner());
+            match.update(1.1);
+            assertEquals(MatchState.PLAYING, match.getState());
+        }
         scoreInLeftGoal(match);
+        assertEquals(3, match.getScore().getRightGoals());
         assertEquals(Winner.RIGHT, match.getWinner());
         match.update(1.1);
         assertEquals(MatchState.FINISHED, match.getState());
@@ -237,7 +244,73 @@ public class MatchTest {
     }
 
     @Test
-    public void shouldStunOpponentWhenKickedWhileTouchingBall() {
+    public void shouldStunRivalHitDirectlyWithoutBall() {
+        Match match = createMatch(MatchConfig.time(GameMode.PVP));
+        match.start();
+        Player left = match.getLeftPlayer();
+        Player right = match.getRightPlayer();
+        double groundCenter = match.getField().getPlayerStartY();
+        left.setPosition(320, groundCenter);
+        right.setPosition(400, groundCenter);
+        double ballX = match.getBall().getX();
+
+        assertTrue(match.kick(Side.LEFT));
+
+        assertTrue(right.isStunned());
+        assertTrue(right.getX() > 400);
+        assertEquals(ballX, match.getBall().getX(), 0.001);
+        assertEquals(0, match.getBall().getVelocityX(), 0.001);
+    }
+
+    @Test
+    public void shouldNotStunRivalJumpingOverTheFoot() {
+        Match match = createMatch(MatchConfig.time(GameMode.PVP));
+        match.start();
+        Player left = match.getLeftPlayer();
+        Player right = match.getRightPlayer();
+        double groundCenter = match.getField().getPlayerStartY();
+        left.setPosition(320, groundCenter);
+        right.setPosition(400, groundCenter - 130);
+
+        assertFalse(match.kick(Side.LEFT));
+
+        assertFalse(right.isStunned());
+    }
+
+    @Test
+    public void shouldNotStunRivalOutOfReach() {
+        Match match = createMatch(MatchConfig.time(GameMode.PVP));
+        match.start();
+        Player left = match.getLeftPlayer();
+        Player right = match.getRightPlayer();
+        double groundCenter = match.getField().getPlayerStartY();
+        left.setPosition(320, groundCenter);
+        right.setPosition(470, groundCenter);
+
+        assertFalse(match.kick(Side.LEFT));
+
+        assertFalse(right.isStunned());
+        assertEquals(470, right.getX(), 0.001);
+    }
+
+    @Test
+    public void shouldNotStunWithKickWhileKickIsCoolingDown() {
+        Match match = createMatch(MatchConfig.time(GameMode.PVP));
+        match.start();
+        Player left = match.getLeftPlayer();
+        Player right = match.getRightPlayer();
+        double groundCenter = match.getField().getPlayerStartY();
+        left.setPosition(320, groundCenter);
+        right.setPosition(400, groundCenter);
+        left.startKickCooldown();
+
+        assertFalse(match.kick(Side.LEFT));
+
+        assertFalse(right.isStunned());
+    }
+
+    @Test
+    public void shouldStunRivalHitDirectlyWhileKickingTheBall() {
         Match match = createMatch(MatchConfig.time(GameMode.PVP));
         match.start();
         Player left = match.getLeftPlayer();

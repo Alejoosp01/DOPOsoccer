@@ -108,6 +108,81 @@ public class MachineControllerTest {
         assertEquals(0, left.getVelocityY(), 0.001);
     }
 
+    @Test
+    public void shouldReturnToDefendWhenBallIsBehind() {
+        match.getBall().setPosition(600, 580);
+        left.setPosition(700, match.getField().getPlayerStartY());
+
+        for (int i = 0; i < 20; i++) {
+            machine.update(match, Side.LEFT, 0.1);
+        }
+
+        assertTrue(left.getX() < match.getBall().getX());
+    }
+
+    @Test
+    public void shouldJumpToBlockHighBallComingHome() {
+        match.getBall().setPosition(480, 400);
+        match.getBall().setVelocity(-400, 0);
+
+        machine.update(match, Side.LEFT, 0.1);
+
+        assertTrue(left.getVelocityY() < 0);
+    }
+
+    @Test
+    public void shouldNotJumpForHighBallGoingAway() {
+        match.getBall().setPosition(480, 400);
+        match.getBall().setVelocity(400, 0);
+
+        machine.update(match, Side.LEFT, 0.1);
+
+        assertEquals(0, left.getVelocityY(), 0.001);
+    }
+
+    @Test
+    public void shouldNotKickTowardOwnGoal() {
+        double groundCenter = match.getField().getPlayerStartY();
+        left.setPosition(400, groundCenter);
+        match.getBall().setPosition(362, groundCenter);
+
+        machine.update(match, Side.LEFT, 0.1);
+
+        assertEquals(0, match.getBall().getVelocityX(), 0.001);
+    }
+
+    @Test
+    public void shouldKeepDecisionUntilReactionTimePasses() {
+        MachineController slow = new MachineController(1);
+        match.getBall().setPosition(700, 580);
+
+        double start = left.getX();
+        slow.update(match, Side.LEFT, 0.1);
+        assertTrue(left.getX() > start);
+
+        match.getBall().setPosition(150, 580);
+        double beforeSecond = left.getX();
+        slow.update(match, Side.LEFT, 0.1);
+        assertTrue(left.getX() > beforeSecond);
+
+        double beforeThird = left.getX();
+        slow.update(match, Side.LEFT, 0.25);
+        assertTrue(left.getX() < beforeThird);
+    }
+
+    @Test
+    public void shouldReactFasterWithHigherLevel() {
+        assertEquals(0.30, new MachineController(1).getReactionTime(), 0.0001);
+        assertEquals(0.10, new MachineController(5).getReactionTime(), 0.0001);
+        assertEquals(MachineController.DEFAULT_LEVEL, new MachineController().getLevel());
+    }
+
+    @Test
+    public void shouldRejectInvalidLevel() {
+        assertThrows(IllegalArgumentException.class, () -> new MachineController(0));
+        assertThrows(IllegalArgumentException.class, () -> new MachineController(6));
+    }
+
     private void fillPower(Player player) {
         for (int i = 0; i < 100; i++) {
             player.update(0.1, match.getField());

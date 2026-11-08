@@ -19,8 +19,8 @@ public final class MainMenuPanel extends JPanel {
 
     private static final long serialVersionUID = 1L;
 
-    private final Runnable onPlay;
-    private final Runnable onExit;
+    private final transient Runnable onPlay;
+    private final transient Runnable onExit;
 
     public MainMenuPanel(Runnable onPlay, Runnable onExit) {
         this.onPlay = onPlay;

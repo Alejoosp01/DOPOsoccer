@@ -149,6 +149,35 @@ public class SurvivalSeriesTest {
     }
 
     @Test
+    public void shouldRaiseMachineLevelEachRoundWon() {
+        SurvivalSeries series = new SurvivalSeries(MatchConfig.survival(1), field, left, right);
+        series.start();
+        assertEquals(1, series.getMachineLevel());
+        assertEquals(1, ((MachineController) series.getRightController()).getLevel());
+
+        for (int round = 2; round <= 6; round++) {
+            scoreInRightGoal(series);
+            series.update(1.1);
+            int expected = Math.min(round, MachineController.MAX_LEVEL);
+            assertEquals(expected, series.getMachineLevel());
+            assertEquals(expected, ((MachineController) series.getRightController()).getLevel());
+        }
+        assertEquals(5, series.getRoundsWon());
+    }
+
+    @Test
+    public void shouldRestartMachineLevelWhenSeriesRestarts() {
+        SurvivalSeries series = new SurvivalSeries(MatchConfig.survival(1), field, left, right);
+        series.start();
+        scoreInRightGoal(series);
+        series.update(1.1);
+        assertEquals(2, series.getMachineLevel());
+
+        series.start();
+        assertEquals(1, series.getMachineLevel());
+    }
+
+    @Test
     public void shouldEndSeriesWhenPlayerLoses() {
         SurvivalSeries series = createSeries(1);
         series.start();

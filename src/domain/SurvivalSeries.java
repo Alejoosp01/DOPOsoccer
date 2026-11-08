@@ -13,9 +13,10 @@ public class SurvivalSeries {
     private final Player leftPlayer;
     private final Player rightPlayer;
     private final PlayerController leftController;
-    private final PlayerController rightController;
+    private PlayerController rightController;
 
     private MatchRunner runner;
+    private int machineLevel;
     private int roundsWon;
     private int roundsPlayed;
     private boolean finished;
@@ -53,6 +54,7 @@ public class SurvivalSeries {
         this.leftController = leftController;
         this.rightController = rightController;
         this.runner = null;
+        this.machineLevel = MachineController.MIN_LEVEL;
         this.roundsWon = 0;
         this.roundsPlayed = 0;
         this.finished = false;
@@ -67,6 +69,7 @@ public class SurvivalSeries {
         roundsPlayed = 0;
         finished = false;
         seriesWinner = Winner.NONE;
+        machineLevel = MachineController.MIN_LEVEL;
         startNextMatch();
     }
 
@@ -88,6 +91,9 @@ public class SurvivalSeries {
         Winner roundWinner = match.getWinner();
         if (roundWinner == Winner.LEFT) {
             roundsWon++;
+            if (machineLevel < MachineController.MAX_LEVEL) {
+                machineLevel++;
+            }
             startNextMatch();
         } else {
             finished = true;
@@ -95,7 +101,14 @@ public class SurvivalSeries {
         }
     }
 
+    /**
+     * Crea el siguiente partido. Si el rival es la maquina, se crea con el
+     * nivel actual: empieza en 1 y sube uno por cada ronda ganada (maximo 5).
+     */
     private void startNextMatch() {
+        if (rightController instanceof MachineController) {
+            rightController = new MachineController(machineLevel);
+        }
         Match match = new Match(config, field, leftPlayer, rightPlayer);
         runner = new MatchRunner(match, leftController, rightController);
         runner.start();
@@ -129,6 +142,13 @@ public class SurvivalSeries {
 
     public int getBallsPerSide() {
         return config.getBallsPerSide();
+    }
+
+    /**
+     * Devuelve el nivel actual de la maquina rival (1 a 5).
+     */
+    public int getMachineLevel() {
+        return machineLevel;
     }
 
     public int getRoundsWon() {

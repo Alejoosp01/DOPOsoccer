@@ -163,8 +163,10 @@ public class Match {
     }
 
     /**
-     * Patea el balon con el jugador del lado indicado.
-     * Si el rival estaba tocando el balon, queda aturdido y empujado.
+     * Patea con el jugador del lado indicado.
+     * Si el pie alcanza el balon, lo patea. Si el pie alcanza al rival (golpe
+     * directo), el rival queda aturdido y empujado, haya balon o no.
+     * Devuelve true si la patada toco el balon o al rival.
      */
     public boolean kick(Side side) {
         if (state != MatchState.PLAYING) {
@@ -172,17 +174,25 @@ public class Match {
         }
         Player player = getPlayer(side);
         Player opponent = getPlayer(side.opposite());
-        boolean opponentTouchingBall = opponent.touchesBall(ball);
+        if (!player.canKick()) {
+            return false;
+        }
+        boolean hitsRival = player.reachesWithKick(opponent);
         boolean kicked = player.kick(ball);
         if (kicked) {
             activatePower(player);
-            if (opponentTouchingBall) {
+        }
+        if (hitsRival) {
+            if (!kicked) {
+                player.startKickCooldown();
+            }
+            if (player.canStunWithKick()) {
                 opponent.stun();
                 opponent.pushBack(Player.KICK_PUSH_DISTANCE);
                 opponent.clampHorizontally(field);
             }
         }
-        return kicked;
+        return kicked || hitsRival;
     }
 
     /**

@@ -61,13 +61,13 @@ public final class GamePanel extends JPanel implements ActionListener {
     private static final int STANDS_BOTTOM = 290;
     private static final int BOARDS_HEIGHT = 28;
 
-    private final GameSession session;
-    private final Runnable onMenu;
-    private final Runnable onRematch;
+    private final transient GameSession session;
+    private final transient Runnable onMenu;
+    private final transient Runnable onRematch;
     private final Timer timer;
     private final ArrayList<CrowdDot> crowd = new ArrayList<CrowdDot>();
-    private final Set<Integer> leftKeys = new HashSet<Integer>();
-    private final Set<Integer> rightKeys = new HashSet<Integer>();
+    private final transient Set<Integer> leftKeys = new HashSet<Integer>();
+    private final transient Set<Integer> rightKeys = new HashSet<Integer>();
 
     private long lastNanos;
     private double accumulator;

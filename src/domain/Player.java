@@ -25,6 +25,8 @@ public class Player {
     public static final double KICK_LIFT = 0.35;
     public static final double KICK_COOLDOWN = 0.25;
     public static final double KICK_PUSH_DISTANCE = 40;
+    public static final double KICK_REACH = 30;
+    public static final int MIN_STRENGTH_TO_STUN = 1;
 
     public static final double TOUCH_SPEED_BASE = 220;
     public static final double TOUCH_SPEED_PER_STRENGTH = 30;
@@ -164,6 +166,47 @@ public class Player {
         ball.setVelocity(getAttackDirection() * speed, -speed * KICK_LIFT);
         kickCooldown = KICK_COOLDOWN;
         return true;
+    }
+
+    /**
+     * Devuelve si la zona del pie alcanza el cuerpo de otro jugador (golpe directo).
+     * La zona es un rectangulo de KICK_REACH delante del jugador, en la mitad baja del cuerpo.
+     */
+    public boolean reachesWithKick(Player other) {
+        if (other == null) {
+            return false;
+        }
+        Rectangle2D.Double body = getBounds();
+        double footTop = body.getY() + body.getHeight() / 2;
+        double footBottom = body.getMaxY();
+        double footStart;
+        double footEnd;
+        if (leftSide) {
+            footStart = body.getMaxX();
+            footEnd = footStart + KICK_REACH;
+        } else {
+            footEnd = body.getX();
+            footStart = footEnd - KICK_REACH;
+        }
+        Rectangle2D.Double rival = other.getBounds();
+        return rival.getX() <= footEnd
+                && rival.getMaxX() >= footStart
+                && rival.getY() <= footBottom
+                && rival.getMaxY() >= footTop;
+    }
+
+    /**
+     * Devuelve si la fuerza del personaje alcanza para aturdir con una patada.
+     */
+    public boolean canStunWithKick() {
+        return character.getStrength() >= MIN_STRENGTH_TO_STUN;
+    }
+
+    /**
+     * Inicia la espera entre patadas aunque la patada no haya tocado el balon.
+     */
+    public void startKickCooldown() {
+        kickCooldown = KICK_COOLDOWN;
     }
 
     /**

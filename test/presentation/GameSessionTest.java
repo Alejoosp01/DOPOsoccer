@@ -130,11 +130,13 @@ public class GameSessionTest {
 
     @Test
     public void shouldNotPauseAfterMatchFinished() {
-        GameSession session = session(MatchConfig.goals(GameMode.PVP, 1));
+        GameSession session = session(MatchConfig.goals(GameMode.PVP, 3));
         session.start();
-        scoreInRightGoal(session);
-        session.update(0.01);
-        session.update(1.1);
+        for (int i = 0; i < 3; i++) {
+            scoreInRightGoal(session);
+            session.update(0.01);
+            session.update(1.1);
+        }
         assertTrue(session.isFinished());
 
         assertFalse(session.pause());

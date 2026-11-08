@@ -22,6 +22,26 @@ public class PlayerTest {
     }
 
     @Test
+    public void shouldReachRivalInFrontWithTheFoot() {
+        Player rival = new Player(player.getCharacter(), false,
+                player.getX() + Player.WIDTH + 10, player.getY());
+        Player behind = new Player(player.getCharacter(), false,
+                player.getX() - Player.WIDTH - 10, player.getY());
+
+        assertTrue(player.reachesWithKick(rival));
+        assertFalse(player.reachesWithKick(behind));
+    }
+
+    @Test
+    public void shouldReachTowardTheLeftWhenDefendingRightGoal() {
+        Player right = new Player(player.getCharacter(), false, 600, player.getY());
+        Player inFront = new Player(player.getCharacter(), true, 600 - Player.WIDTH - 10, player.getY());
+
+        assertTrue(right.reachesWithKick(inFront));
+        assertFalse(right.reachesWithKick(null));
+    }
+
+    @Test
     public void shouldMoveUsingSpeedStat() {
         double startX = player.getX();
         assertTrue(player.move(1, 1, field));
