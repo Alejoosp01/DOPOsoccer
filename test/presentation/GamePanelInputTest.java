@@ -12,14 +12,14 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import domain.Country;
-import domain.FreezePower;
+import domain.DOPOSoccer;
+import domain.DOPOSoccerException;
 import domain.GameCharacter;
 import domain.GameMode;
 import domain.HumanController;
+import domain.LightningShot;
 import domain.MatchConfig;
-import domain.DOPOSoccer;
-import domain.DOPOSoccerException;
+import domain.PlayerProfile;
 
 /**
  * Pruebas de los enlaces de teclado del panel de juego.
@@ -32,12 +32,11 @@ public class GamePanelInputTest {
 
     @BeforeEach
     public void setUp() throws DOPOSoccerException {
-        GameCharacter left = new GameCharacter("Left",
-                new Country("Left", new FreezePower()), 3, 3, 3);
-        GameCharacter right = new GameCharacter("Right",
-                new Country("Right", new FreezePower()), 3, 3, 3);
-        session = new DOPOSoccer(MatchConfig.time(GameMode.PVP), left, right);
-        panel = new GamePanel(session, () -> { }, () -> { });
+        GameCharacter left = new GameCharacter("Left", new LightningShot());
+        GameCharacter right = new GameCharacter("Right", new LightningShot());
+        session = new DOPOSoccer(MatchConfig.byTime(GameMode.PVP, 1), left, right,
+                new PlayerProfile("Jugador 1"), new PlayerProfile("Jugador 2"));
+        panel = new GamePanel(session, () -> { }, () -> { }, Resolution.MEDIUM);
     }
 
     @AfterEach

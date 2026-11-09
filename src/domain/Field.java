@@ -98,8 +98,11 @@ public class Field {
         return width / 2;
     }
 
+    /**
+     * Devuelve la Y desde donde cae el balon: el centro de la cancha.
+     */
     public double getBallStartY() {
-        return groundY - BALL_RADIUS;
+        return height / 2;
     }
 
     public double getLeftPlayerStartX() {

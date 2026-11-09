@@ -1,79 +1,85 @@
 package domain;
 
 /**
- * Personaje dentro de la cancha.
- * Maneja posicion, movimiento, salto, patada, efectos y barra de poder.
+ * Personaje jugando en la cancha.
+ * Une el perfil del jugador (estadisticas y puntos) con el personaje elegido
+ * (pais y tiro de poder) y maneja posicion, vida, aturdimiento, aura,
+ * barra de poder y el efecto que este sufriendo.
  * El centro del jugador es (x, y) y el eje Y crece hacia abajo.
  */
 public class Player {
 
-    public static final double STUN_SECONDS = 3;
     public static final double WIDTH = 70;
     public static final double HEIGHT = 120;
-    public static final double SHRUNK_SCALE = 0.5;
+    public static final double STUN_SECONDS = 3;
 
-
-    public static final double MOVE_SPEED_BASE = 200;
-    public static final double MOVE_SPEED_PER_STAT = 50;
-    public static final double JUMP_SPEED_BASE = 500;
-    public static final double JUMP_SPEED_PER_STAT = 80;
-    public static final double KICK_SPEED_BASE = 550;
-    public static final double KICK_SPEED_PER_STAT = 60;
+    public static final double BASE_SPEED = 300;
+    public static final double BASE_JUMP_HEIGHT = 150;
+    public static final double KICK_SPEED = 700;
     public static final double KICK_LIFT = 0.35;
     public static final double KICK_COOLDOWN = 0.25;
-    public static final double KICK_PUSH_DISTANCE = 40;
     public static final double KICK_REACH = 30;
-    public static final int MIN_STRENGTH_TO_STUN = 1;
-
-    public static final double TOUCH_SPEED_BASE = 220;
-    public static final double TOUCH_SPEED_PER_STRENGTH = 30;
+    public static final double TOUCH_SPEED = 300;
     public static final double TOUCH_LIFT = 200;
+    public static final double GROUND_FRICTION = 6;
 
-    public static final double POWER_CHARGE_SECONDS = 10;
+    private final PlayerProfile profile;
+    private final GameCharacter character;
+    private final boolean leftSide;
+    private final PowerBar powerBar;
 
-    private GameCharacter character;
-    private boolean leftSide;
     private double x;
     private double y;
+    private double velocityX;
     private double velocityY;
-
+    private double life;
     private double stunTime;
-    private double frozenTime;
-    private double shrinkTime;
-    private double confusedTime;
     private double kickCooldown;
+    private boolean auraActive;
+    private Effect effect;
 
-    private double powerCharge;
-    private boolean powerArmed;
-
-    public Player(GameCharacter character, boolean leftSide, double x, double y) {
+    public Player(PlayerProfile profile, GameCharacter character, boolean leftSide) {
+        if (profile == null || character == null) {
+            throw new IllegalArgumentException("El jugador necesita un perfil y un personaje");
+        }
+        this.profile = profile;
         this.character = character;
         this.leftSide = leftSide;
-        this.x = x;
-        this.y = y;
+        this.powerBar = new PowerBar();
+        this.x = 0;
+        this.y = 0;
+        this.velocityX = 0;
         this.velocityY = 0;
+        this.life = profile.getStats().getMaxLife();
         this.stunTime = 0;
-        this.frozenTime = 0;
-        this.shrinkTime = 0;
-        this.confusedTime = 0;
         this.kickCooldown = 0;
-        this.powerCharge = 0;
-        this.powerArmed = false;
+        this.auraActive = false;
+        this.effect = null;
     }
 
     /**
-     * Pone al jugador en una posicion y limpia sus efectos.
-     * La barra de poder se conserva; para vaciarla se usa resetPower().
+     * Prepara al jugador para un partido nuevo: vida al maximo, barra vacia y sin aura.
      */
-    public void reset(double x, double y) {
+    public void startMatch(double x, double y) {
+        life = getMaxLife();
+        powerBar.empty();
+        auraActive = false;
+        resetPosition(x, y);
+    }
+
+    /**
+     * Vuelve a una posicion inicial (despues de un gol) y quita efectos y aturdimiento.
+     */
+    public void resetPosition(double x, double y) {
         setPosition(x, y);
+        velocityX = 0;
         velocityY = 0;
-        stunTime = 0;
-        frozenTime = 0;
-        shrinkTime = 0;
-        confusedTime = 0;
+        effect = null;
         kickCooldown = 0;
-        powerArmed = false;
+        if (isStunned()) {
+            stunTime = 0;
+            life = getMaxLife();
+        }
     }
 
     /**
@@ -85,38 +91,75 @@ public class Player {
     }
 
     /**
-     * Avanza la fisica del jugador: efectos, barra de poder y gravedad.
-     * El movimiento horizontal se hace con move(...).
+     * Avanza el jugador un instante: efecto, aturdimiento, barra y fisica.
      */
     public void update(double dt, Field field) {
         if (dt <= 0 || field == null) {
             return;
         }
-        updateEffects(dt);
-        addPowerCharge(dt);
+        updateEffect(dt);
+        updateStun(dt);
+        powerBar.update(dt);
+        kickCooldown = Math.max(0, kickCooldown - dt);
 
         velocityY += Field.GRAVITY * dt;
         y += velocityY * dt;
+        x += velocityX * dt;
 
-        double halfHeight = getHeight() / 2;
+        double halfHeight = HEIGHT / 2;
         if (y - halfHeight < 0) {
             y = halfHeight;
             if (velocityY < 0) {
                 velocityY = 0;
             }
         }
-        if (y + halfHeight > field.getGroundY()) {
+        if (y + halfHeight >= field.getGroundY()) {
             y = field.getGroundY() - halfHeight;
             velocityY = 0;
+            velocityX = velocityX * Math.max(0, 1 - GROUND_FRICTION * dt);
+            if (Math.abs(velocityX) < 5) {
+                velocityX = 0;
+            }
+        }
+        double before = x;
+        clampHorizontally(field);
+        if (x != before) {
+            velocityX = 0;
+        }
+    }
+
+    /**
+     * Descuenta el efecto actual y lo quita cuando termina.
+     */
+    private void updateEffect(double dt) {
+        if (effect == null) {
+            return;
+        }
+        effect.update(dt);
+        if (effect.isOver()) {
+            effect = null;
+        }
+    }
+
+    /**
+     * Descuenta el aturdimiento; al terminar, la vida vuelve al maximo.
+     */
+    private void updateStun(double dt) {
+        if (stunTime <= 0) {
+            return;
+        }
+        stunTime = Math.max(0, stunTime - dt);
+        if (stunTime == 0) {
+            life = getMaxLife();
         }
     }
 
     /**
      * Mueve al jugador horizontalmente. direction solo usa su signo.
-     * Devuelve false si esta aturdido, congelado o no puede moverse.
+     * Devuelve false si no puede moverse (aturdido o por un efecto).
      */
     public boolean move(double direction, double dt, Field field) {
-        if (field == null || dt <= 0 || direction == 0 || !canAct()) {
+        if (field == null || dt <= 0 || direction == 0 || !canMove()) {
             return false;
         }
         double sign;
@@ -125,19 +168,16 @@ public class Player {
         } else {
             sign = -1;
         }
-        if (isConfused()) {
-            sign = -sign;
-        }
         x += sign * getMoveSpeed() * dt;
         clampHorizontally(field);
         return true;
     }
 
     /**
-     * Salta si el jugador esta en el suelo y puede actuar.
+     * Salta si esta en el suelo y puede saltar.
      */
     public boolean jump(Field field) {
-        if (field == null || !canAct() || !isOnGround(field)) {
+        if (field == null || !canJump() || !isOnGround(field)) {
             return false;
         }
         velocityY = -getJumpSpeed();
@@ -145,29 +185,81 @@ public class Player {
     }
 
     /**
-     * Devuelve si el jugador esta apoyado en el suelo.
-     */
-    public boolean isOnGround(Field field) {
-        if (field == null) {
-            return false;
-        }
-        return y + getHeight() / 2 >= field.getGroundY() - 0.5;
-    }
-
-    /**
-     * Patea el balon si esta al alcance y la patada no esta en enfriamiento.
-     * El balon sale hacia el arco rival con velocidad segun la fuerza.
+     * Patea el balon si lo toca y la patada esta lista.
+     * La fuerza con que sale el balon es fija: Kick solo cambia el daño.
      */
     public boolean kick(Ball ball) {
         if (ball == null || !canKick() || !touchesBall(ball)) {
             return false;
         }
-        double speed = getKickSpeed();
-        double front = getWidth() / 2 + ball.getRadius() + 1;
+        double front = WIDTH / 2 + ball.getRadius() + 1;
         ball.setPosition(x + getAttackDirection() * front, ball.getY());
-        ball.setVelocity(getAttackDirection() * speed, -speed * KICK_LIFT);
+        ball.setVelocity(getAttackDirection() * KICK_SPEED, -KICK_SPEED * KICK_LIFT);
         kickCooldown = KICK_COOLDOWN;
         return true;
+    }
+
+    /**
+     * Inicia la espera entre patadas aunque la patada no haya tocado el balon.
+     */
+    public void startKickCooldown() {
+        kickCooldown = KICK_COOLDOWN;
+    }
+
+    /**
+     * Recibe daño. La vida nunca baja de 0; al llegar a 0 queda aturdido 3 segundos.
+     */
+    public void receiveDamage(double amount) {
+        if (amount <= 0 || isStunned()) {
+            return;
+        }
+        life = Math.max(0, life - amount);
+        if (life == 0) {
+            stunTime = STUN_SECONDS;
+        }
+    }
+
+    /**
+     * Pone un efecto nuevo. Los efectos no se acumulan: reemplaza al anterior.
+     */
+    public void applyEffect(Effect newEffect) {
+        if (newEffect == null) {
+            return;
+        }
+        effect = newEffect;
+        effect.onStart(this);
+    }
+
+    /**
+     * Activa el aura si la barra esta llena y no tiene ya un poder activo.
+     * La barra se vacia y empieza a recargarse en ese mismo instante.
+     */
+    public boolean activateAura() {
+        if (auraActive || !powerBar.isFull()) {
+            return false;
+        }
+        powerBar.empty();
+        auraActive = true;
+        return true;
+    }
+
+    /**
+     * Gasta el aura (cuando toca el balon y sale el tiro de poder).
+     */
+    public boolean consumeAura() {
+        if (!auraActive) {
+            return false;
+        }
+        auraActive = false;
+        return true;
+    }
+
+    /**
+     * Lanza al jugador con una velocidad (la usan los efectos Empuje e Inconsciente).
+     */
+    public void launch(double newVelocityX, double newVelocityY) {
+        velocityX = newVelocityX;
+        velocityY = newVelocityY;
     }
 
     /**
@@ -195,20 +287,6 @@ public class Player {
                 && rival.getMaxX() >= footStart
                 && rival.getY() <= footBottom
                 && rival.getMaxY() >= footTop;
-    }
-
-    /**
-     * Devuelve si la fuerza del personaje alcanza para aturdir con una patada.
-     */
-    public boolean canStunWithKick() {
-        return character.getStrength() >= MIN_STRENGTH_TO_STUN;
-    }
-
-    /**
-     * Inicia la espera entre patadas aunque la patada no haya tocado el balon.
-     */
-    public void startKickCooldown() {
-        kickCooldown = KICK_COOLDOWN;
     }
 
     /**
@@ -243,251 +321,157 @@ public class Player {
         if (field == null) {
             return;
         }
-        double halfWidth = getWidth() / 2;
+        double halfWidth = WIDTH / 2;
         double minX = field.getLeftGoalLineX() + halfWidth;
         double maxX = field.getRightGoalLineX() - halfWidth;
         x = Math.max(minX, Math.min(maxX, x));
     }
 
     /**
-     * Devuelve la velocidad horizontal de movimiento segun la estadistica.
+     * Devuelve si puede moverse: no esta aturdido y su efecto se lo permite.
      */
-    public double getMoveSpeed() {
-        return MOVE_SPEED_BASE + MOVE_SPEED_PER_STAT * character.getSpeed();
-    }
-
-    /**
-     * Devuelve la velocidad inicial del salto segun la estadistica.
-     */
-    public double getJumpSpeed() {
-        return JUMP_SPEED_BASE + JUMP_SPEED_PER_STAT * character.getJump();
-    }
-
-    /**
-     * Devuelve la velocidad del balon al patear segun la fuerza.
-     */
-    public double getKickSpeed() {
-        return KICK_SPEED_BASE + KICK_SPEED_PER_STAT * character.getStrength();
-    }
-
-    /**
-     * Devuelve la velocidad con la que el cuerpo empuja el balon al tocarlo.
-     */
-    public double getTouchSpeed() {
-        return TOUCH_SPEED_BASE + TOUCH_SPEED_PER_STRENGTH * character.getStrength();
-    }
-
-    /**
-     * Suma carga a la barra de poder. Se llena en POWER_CHARGE_SECONDS.
-     */
-    public void addPowerCharge(double dt) {
-        if (dt <= 0) {
-            return;
-        }
-        powerCharge = Math.min(1, powerCharge + dt / POWER_CHARGE_SECONDS);
-    }
-
-    /**
-     * Devuelve la carga actual de la barra entre 0 y 1.
-     */
-    public double getPowerCharge() {
-        return powerCharge;
-    }
-
-    /**
-     * Devuelve si la barra esta llena.
-     */
-    public boolean isPowerReady() {
-        return powerCharge >= 1;
-    }
-
-    /**
-     * Devuelve si el poder fue armado y espera el siguiente golpe al balon.
-     */
-    public boolean isPowerArmed() {
-        return powerArmed;
-    }
-
-    /**
-     * Arma el poder si la barra esta llena y el jugador puede actuar.
-     */
-    public boolean armPower() {
-        if (!isPowerReady() || !canAct()) {
+    public boolean canMove() {
+        if (isStunned()) {
             return false;
         }
-        powerArmed = true;
-        return true;
+        return effect == null || effect.canMove();
     }
 
     /**
-     * Consume el poder armado, vacia la barra y devuelve si se consumio.
+     * Devuelve si puede saltar: no esta aturdido y su efecto se lo permite.
      */
-    public boolean consumePower() {
-        if (!powerArmed) {
+    public boolean canJump() {
+        if (isStunned()) {
             return false;
         }
-        powerArmed = false;
-        powerCharge = 0;
-        return true;
+        return effect == null || effect.canJump();
     }
 
     /**
-     * Deja la barra vacia y desarma el poder.
-     */
-    public void resetPower() {
-        powerCharge = 0;
-        powerArmed = false;
-    }
-
-    /**
-     * Aturde al jugador durante 3 segundos.
-     */
-    public void stun() {
-        stunTime = STUN_SECONDS;
-    }
-
-    /**
-     * Congela al jugador durante los segundos indicados.
-     */
-    public void freeze(double seconds) {
-        frozenTime = seconds;
-    }
-
-    /**
-     * Encoge al jugador durante los segundos indicados.
-     */
-    public void shrink(double seconds) {
-        shrinkTime = seconds;
-    }
-
-    /**
-     * Invierte los controles del jugador durante los segundos indicados.
-     */
-    public void confuse(double seconds) {
-        confusedTime = seconds;
-    }
-
-    /**
-     * Empuja al jugador hacia su propio arco.
-     */
-    public void pushBack(double distance) {
-        x = x - getAttackDirection() * distance;
-    }
-
-    /**
-     * Descuenta el tiempo de todos los efectos. dt esta en segundos.
-     */
-    public void updateEffects(double dt) {
-        stunTime = reduce(stunTime, dt);
-        frozenTime = reduce(frozenTime, dt);
-        shrinkTime = reduce(shrinkTime, dt);
-        confusedTime = reduce(confusedTime, dt);
-        kickCooldown = reduce(kickCooldown, dt);
-    }
-
-    /**
-     * Resta dt al tiempo de un efecto sin bajar de 0.
-     */
-    private double reduce(double time, double dt) {
-        if (time - dt < 0) {
-            return 0;
-        }
-        return time - dt;
-    }
-
-    /**
-     * Un jugador aturdido o congelado no puede moverse, saltar ni patear.
-     */
-    public boolean canAct() {
-        return !isStunned() && !isFrozen();
-    }
-
-    /**
-     * Devuelve si la patada esta lista (puede actuar y no hay enfriamiento).
+     * Devuelve si puede patear: no esta aturdido, su efecto lo permite y no hay espera.
      */
     public boolean canKick() {
-        return canAct() && kickCooldown <= 0;
+        if (isStunned() || kickCooldown > 0) {
+            return false;
+        }
+        return effect == null || effect.canKick();
     }
 
     /**
-     * Devuelve si el jugador esta aturdido.
+     * Devuelve si esta apoyado en el suelo.
+     */
+    public boolean isOnGround(Field field) {
+        if (field == null) {
+            return false;
+        }
+        return y + HEIGHT / 2 >= field.getGroundY() - 0.5;
+    }
+
+    /**
+     * Devuelve la velocidad de desplazamiento: base * multiplicador de speed * efecto.
+     */
+    public double getMoveSpeed() {
+        double speed = BASE_SPEED * profile.getStats().multiplier(StatType.SPEED);
+        if (effect != null) {
+            speed = speed * effect.speedFactor();
+        }
+        return speed;
+    }
+
+    /**
+     * Devuelve la velocidad inicial del salto. Jump sube la ALTURA un 10 % por
+     * punto: altura = base * multiplicador, y velocidad = raiz(2 * g * altura).
+     */
+    public double getJumpSpeed() {
+        double height = BASE_JUMP_HEIGHT * profile.getStats().multiplier(StatType.JUMP);
+        return Math.sqrt(2 * Field.GRAVITY * height);
+    }
+
+    /**
+     * Devuelve el multiplicadorKick del jugador.
+     */
+    public double getKickMultiplier() {
+        return profile.getStats().getKickMultiplier();
+    }
+
+    /**
+     * Devuelve la vida maxima segun survival.
+     */
+    public double getMaxLife() {
+        return profile.getStats().getMaxLife();
+    }
+
+    /**
+     * Devuelve la vida actual.
+     */
+    public double getLife() {
+        return life;
+    }
+
+    /**
+     * Devuelve si esta aturdido.
      */
     public boolean isStunned() {
         return stunTime > 0;
     }
 
     /**
-     * Devuelve si el jugador esta congelado.
+     * Devuelve los segundos de aturdimiento que le quedan.
      */
-    public boolean isFrozen() {
-        return frozenTime > 0;
+    public double getStunTimeLeft() {
+        return stunTime;
     }
 
     /**
-     * Devuelve si el jugador esta encogido.
+     * Devuelve si tiene el aura (poder activo).
      */
-    public boolean isShrunk() {
-        return shrinkTime > 0;
+    public boolean hasAura() {
+        return auraActive;
     }
 
     /**
-     * Devuelve si el jugador tiene los controles invertidos.
+     * Devuelve el efecto que sufre ahora, o null si no tiene.
      */
-    public boolean isConfused() {
-        return confusedTime > 0;
+    public Effect getEffect() {
+        return effect;
     }
 
     /**
-     * Devuelve el personaje que controla este jugador.
+     * Devuelve la barra de poder.
+     */
+    public PowerBar getPowerBar() {
+        return powerBar;
+    }
+
+    /**
+     * Devuelve el perfil del jugador (estadisticas y puntos).
+     */
+    public PlayerProfile getProfile() {
+        return profile;
+    }
+
+    /**
+     * Devuelve el personaje elegido.
      */
     public GameCharacter getCharacter() {
         return character;
     }
 
     /**
-     * Devuelve si el jugador defiende el arco izquierdo.
+     * Devuelve si defiende el arco izquierdo.
      */
     public boolean isLeftSide() {
         return leftSide;
     }
 
     /**
-     * Devuelve el lado que defiende el jugador.
+     * Devuelve el lado que defiende.
      */
     public Side getSide() {
         if (leftSide) {
             return Side.LEFT;
         }
         return Side.RIGHT;
-    }
-
-    /**
-     * Devuelve el ancho actual del jugador (cambia si esta encogido).
-     */
-    public double getWidth() {
-        if (isShrunk()) {
-            return WIDTH * SHRUNK_SCALE;
-        }
-        return WIDTH;
-    }
-
-    /**
-     * Devuelve el alto actual del jugador (cambia si esta encogido).
-     */
-    public double getHeight() {
-        if (isShrunk()) {
-            return HEIGHT * SHRUNK_SCALE;
-        }
-        return HEIGHT;
-    }
-
-    /**
-     * Devuelve el rectangulo que ocupa el jugador.
-     */
-    public Hitbox getBounds() {
-        double width = getWidth();
-        double height = getHeight();
-        return new Hitbox(x - width / 2, y - height / 2, width, height);
     }
 
     /**
@@ -498,6 +482,27 @@ public class Player {
             return 1;
         }
         return -1;
+    }
+
+    /**
+     * Devuelve el ancho del jugador.
+     */
+    public double getWidth() {
+        return WIDTH;
+    }
+
+    /**
+     * Devuelve el alto del jugador.
+     */
+    public double getHeight() {
+        return HEIGHT;
+    }
+
+    /**
+     * Devuelve el rectangulo que ocupa el jugador.
+     */
+    public Hitbox getBounds() {
+        return new Hitbox(x - WIDTH / 2, y - HEIGHT / 2, WIDTH, HEIGHT);
     }
 
     /**
@@ -515,7 +520,14 @@ public class Player {
     }
 
     /**
-     * Devuelve la velocidad vertical actual.
+     * Devuelve la velocidad horizontal (por un empuje).
+     */
+    public double getVelocityX() {
+        return velocityX;
+    }
+
+    /**
+     * Devuelve la velocidad vertical.
      */
     public double getVelocityY() {
         return velocityY;

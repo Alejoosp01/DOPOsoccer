@@ -34,10 +34,8 @@ public class MatchRunner {
         switch (mode) {
             case PVP:
                 return new MatchRunner(match, new HumanController(), new HumanController());
-            case PVM:
-                return new MatchRunner(match, new HumanController(), new MachineController());
             default:
-                return new MatchRunner(match, new MachineController(), new MachineController());
+                return new MatchRunner(match, new HumanController(), new MachineController());
         }
     }
 

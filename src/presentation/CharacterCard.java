@@ -14,17 +14,18 @@ import java.awt.geom.RoundRectangle2D;
 import javax.swing.JToggleButton;
 
 import domain.GameCharacter;
+import domain.PowerShot;
 
 /**
  * Tarjeta seleccionable de un personaje: cabeza con los colores del pais,
- * nombre, poder y barras de velocidad, salto y fuerza (de 1 a 5).
+ * nombre, tiro de poder, daño, duracion y efecto.
  */
 public final class CharacterCard extends JToggleButton {
 
     private static final long serialVersionUID = 1L;
 
-    public static final int WIDTH = 212;
-    public static final int HEIGHT = 124;
+    public static final int WIDTH = 260;
+    public static final int HEIGHT = 112;
 
     private final transient GameCharacter character;
     private final Color sideColor;
@@ -38,8 +39,8 @@ public final class CharacterCard extends JToggleButton {
         setOpaque(false);
         setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         setPreferredSize(new Dimension(WIDTH, HEIGHT));
-        setToolTipText(character.getPower().getName() + ": "
-                + UiTheme.powerDescription(character.getPower()));
+        setToolTipText(character.getPowerShot().getName() + ": "
+                + UiTheme.powerDescription(character.getPowerShot()));
     }
 
     /**
@@ -79,17 +80,31 @@ public final class CharacterCard extends JToggleButton {
 
         drawHead(g2, 40, 40, 22);
 
-        g2.setFont(UiTheme.font(Font.BOLD, 15));
+        PowerShot shot = character.getPowerShot();
+        g2.setFont(UiTheme.font(Font.BOLD, 16));
         g2.setColor(UiTheme.TEXT);
-        g2.drawString(character.getName(), 74, 36);
-        g2.setFont(UiTheme.font(Font.BOLD, 12));
+        g2.drawString(character.getName(), 74, 34);
+        g2.setFont(UiTheme.font(Font.BOLD, 13));
         g2.setColor(UiTheme.GOLD);
-        g2.drawString(character.getPower().getName(), 74, 54);
+        g2.drawString(shot.getName(), 74, 54);
 
-        drawStat(g2, "VEL", character.getSpeed(), 82);
-        drawStat(g2, "SALTO", character.getJump(), 98);
-        drawStat(g2, "FUERZA", character.getStrength(), 114);
+        g2.setFont(UiTheme.font(Font.BOLD, 12));
+        g2.setColor(UiTheme.MUTED);
+        g2.drawString("Dano " + shot.getDamage() + "   |   Efecto "
+                + formatSeconds(shot.getEffectDuration()), 16, 84);
+        g2.setColor(UiTheme.ICE);
+        g2.drawString(shot.createEffect().getName(), 16, 101);
         g2.dispose();
+    }
+
+    /**
+     * Escribe los segundos sin decimales si son enteros (3 s) o con uno (1.5 s).
+     */
+    private String formatSeconds(double seconds) {
+        if (seconds == Math.floor(seconds)) {
+            return (int) seconds + " s";
+        }
+        return seconds + " s";
     }
 
     /**
@@ -122,23 +137,5 @@ public final class CharacterCard extends JToggleButton {
         }
         g2.setStroke(new BasicStroke(3f));
         g2.draw(head);
-    }
-
-    /**
-     * Dibuja una estadistica como 5 segmentos; se llenan tantos como su valor.
-     */
-    private void drawStat(Graphics2D g2, String label, int value, int baseline) {
-        g2.setFont(UiTheme.font(Font.BOLD, 11));
-        g2.setColor(UiTheme.MUTED);
-        g2.drawString(label, 16, baseline);
-        for (int i = 0; i < GameCharacter.MAX_STAT; i++) {
-            int x = 76 + i * 25;
-            if (i < value) {
-                g2.setColor(sideColor);
-            } else {
-                g2.setColor(UiTheme.withAlpha(UiTheme.BORDER, 120));
-            }
-            g2.fillRoundRect(x, baseline - 9, 21, 9, 4, 4);
-        }
     }
 }

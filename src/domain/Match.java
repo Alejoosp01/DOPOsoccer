@@ -9,6 +9,7 @@ public class Match {
 
     public static final double GOAL_PAUSE_SECONDS = 1.0;
     public static final double MAX_STEP = 1.0 / 120.0;
+    public static final double KICK_DAMAGE = 10;
 
     private final MatchConfig config;
     private final Field field;
@@ -21,9 +22,8 @@ public class Match {
     private MatchState stateBeforePause;
     private double timeLeft;
     private double goalPauseRemaining;
-    private int remainingBallsLeft;
-    private int remainingBallsRight;
-    private boolean goldenGoal;
+    private boolean suddenDeath;
+    private boolean endedEarly;
     private Winner winner;
 
     public Match(MatchConfig config, Player leftPlayer, Player rightPlayer) {
@@ -51,30 +51,29 @@ public class Match {
         this.score = new Score();
         this.state = MatchState.READY;
         this.stateBeforePause = null;
-        this.timeLeft = config.getDuration();
+        this.timeLeft = config.getDurationSeconds();
         this.goalPauseRemaining = 0;
-        this.remainingBallsLeft = config.getBallsPerSide();
-        this.remainingBallsRight = config.getBallsPerSide();
-        this.goldenGoal = false;
+        this.suddenDeath = false;
+        this.endedEarly = false;
         this.winner = Winner.NONE;
         resetPositions();
     }
 
     /**
-     * Prepara el partido y lo pone en juego desde cero.
+     * Pone el partido en juego desde cero: marcador 0-0, barras vacias y
+     * vida de cada jugador en su maximo.
      */
     public void start() {
         score.reset();
         winner = Winner.NONE;
-        goldenGoal = false;
+        suddenDeath = false;
+        endedEarly = false;
         stateBeforePause = null;
-        timeLeft = config.getDuration();
-        remainingBallsLeft = config.getBallsPerSide();
-        remainingBallsRight = config.getBallsPerSide();
+        timeLeft = config.getDurationSeconds();
         goalPauseRemaining = 0;
-        leftPlayer.resetPower();
-        rightPlayer.resetPower();
-        resetPositions();
+        ball.reset(field);
+        leftPlayer.startMatch(field.getLeftPlayerStartX(), field.getPlayerStartY());
+        rightPlayer.startMatch(field.getRightPlayerStartX(), field.getPlayerStartY());
         state = MatchState.PLAYING;
     }
 
@@ -109,7 +108,7 @@ public class Match {
             if (checkGoal()) {
                 break;
             }
-            if (config.isTimed() && !goldenGoal) {
+            if (config.isTimed() && !suddenDeath) {
                 timeLeft = timeLeft - step;
                 if (timeLeft <= 0) {
                     handleTimeExpired();
@@ -143,6 +142,19 @@ public class Match {
     }
 
     /**
+     * Termina el partido en este momento: gana quien vaya ganando; si van
+     * empatados no hay ganador (decision pendiente de confirmar con el monitor).
+     */
+    public void finishNow() {
+        if (state == MatchState.READY || state == MatchState.FINISHED) {
+            return;
+        }
+        winner = score.leader();
+        endedEarly = true;
+        state = MatchState.FINISHED;
+    }
+
+    /**
      * Mueve al jugador del lado indicado. Solo funciona con el partido en juego.
      */
     public boolean move(Side side, double direction, double dt) {
@@ -164,8 +176,8 @@ public class Match {
 
     /**
      * Patea con el jugador del lado indicado.
-     * Si el pie alcanza el balon, lo patea. Si el pie alcanza al rival (golpe
-     * directo), el rival queda aturdido y empujado, haya balon o no.
+     * Si el pie toca el balon, lo impulsa (o lanza el tiro de poder si tiene aura).
+     * Si el pie alcanza al rival, le hace 10 x multiplicadorKick de daño.
      * Devuelve true si la patada toco el balon o al rival.
      */
     public boolean kick(Side side) {
@@ -178,46 +190,46 @@ public class Match {
             return false;
         }
         boolean hitsRival = player.reachesWithKick(opponent);
-        boolean kicked = player.kick(ball);
-        if (kicked) {
-            activatePower(player);
+        boolean touchedBall;
+        if (player.hasAura() && player.touchesBall(ball)) {
+            firePowerShot(player);
+            player.startKickCooldown();
+            touchedBall = true;
+        } else {
+            touchedBall = player.kick(ball);
         }
         if (hitsRival) {
-            if (!kicked) {
+            if (!touchedBall) {
                 player.startKickCooldown();
             }
-            if (player.canStunWithKick()) {
-                opponent.stun();
-                opponent.pushBack(Player.KICK_PUSH_DISTANCE);
-                opponent.clampHorizontally(field);
-            }
+            opponent.receiveDamage(KICK_DAMAGE * player.getKickMultiplier());
         }
-        return kicked || hitsRival;
+        return touchedBall || hitsRival;
     }
 
     /**
-     * Arma el poder del jugador del lado indicado para el siguiente golpe.
+     * Activa el poder (aura) del jugador del lado indicado si su barra esta llena.
      */
-    public boolean armPower(Side side) {
+    public boolean activatePower(Side side) {
         if (state != MatchState.PLAYING) {
             return false;
         }
-        return getPlayer(side).armPower();
+        return getPlayer(side).activateAura();
     }
 
     /**
-     * Consume el poder armado y lo ejecuta sobre el balon.
+     * Gasta el aura del jugador y lanza su tiro de poder con el balon.
      */
-    private void activatePower(Player player) {
-        if (!player.canAct() || !player.isPowerArmed() || !player.consumePower()) {
-            return;
-        }
-        Player opponent = getPlayer(player.getSide().opposite());
-        Power power = player.getCharacter().getPower();
-        power.activate(ball, player, opponent);
-        ball.setActivePower(power, player);
+    private void firePowerShot(Player player) {
+        player.consumeAura();
+        PowerShot shot = player.getCharacter().getPowerShot();
+        shot.launch(ball, player);
+        ball.launchShot(shot, player);
     }
 
+    /**
+     * Espera la pausa despues de un gol; luego reinicia posiciones o termina.
+     */
     private void updateGoalPause(double dt) {
         goalPauseRemaining = goalPauseRemaining - dt;
         if (goalPauseRemaining > 0) {
@@ -232,6 +244,9 @@ public class Match {
         state = MatchState.PLAYING;
     }
 
+    /**
+     * Revisa si el balon entro completo en algun arco.
+     */
     private boolean checkGoal() {
         if (field.getLeftGoal().contains(ball)) {
             registerGoal(Side.RIGHT);
@@ -247,68 +262,42 @@ public class Match {
     /**
      * El lado que anota es el rival del arco donde entro el balon.
      * Asi el autogol queda cubierto sin logica especial.
+     * Quien recibe el gol suma un cuarto de barra de poder.
      */
     private void registerGoal(Side scorer) {
         score.score(scorer);
-        Side conceding = scorer.opposite();
-        if (config.getMatchType() == MatchType.SURVIVAL) {
-            if (conceding == Side.LEFT) {
-                remainingBallsLeft = Math.max(0, remainingBallsLeft - 1);
-            } else {
-                remainingBallsRight = Math.max(0, remainingBallsRight - 1);
-            }
-        }
-        Winner decided = decideWinner(scorer);
-        if (decided != Winner.NONE) {
-            winner = decided;
+        getPlayer(scorer.opposite()).getPowerBar().addQuarter();
+        ball.clearShot();
+        if (suddenDeath) {
+            winner = Winner.fromSide(scorer);
+        } else if (config.getMatchType() == MatchType.GOALS
+                && score.getGoals(scorer) >= config.getGoalsTarget()) {
+            winner = Winner.fromSide(scorer);
         }
         state = MatchState.GOAL;
         goalPauseRemaining = GOAL_PAUSE_SECONDS;
     }
 
-    private Winner decideWinner(Side scorer) {
-        if (goldenGoal) {
-            return Winner.fromSide(scorer);
-        }
-        if (config.getMatchType() == MatchType.GOALS) {
-            if (score.getLeftGoals() >= config.getGoalsTarget()) {
-                return Winner.LEFT;
-            }
-            if (score.getRightGoals() >= config.getGoalsTarget()) {
-                return Winner.RIGHT;
-            }
-            return Winner.NONE;
-        }
-        if (config.getMatchType() == MatchType.SURVIVAL) {
-            if (remainingBallsLeft <= 0) {
-                return Winner.RIGHT;
-            }
-            if (remainingBallsRight <= 0) {
-                return Winner.LEFT;
-            }
-            return Winner.NONE;
-        }
-        return Winner.NONE;
-    }
-
+    /**
+     * Se acabo el tiempo: si hay empate empieza la muerte subita, si no gana el lider.
+     */
     private void handleTimeExpired() {
         timeLeft = 0;
         if (score.isTie()) {
-            goldenGoal = true;
+            suddenDeath = true;
             return;
         }
-        finish(score.leader());
-    }
-
-    private void finish(Winner matchWinner) {
-        winner = matchWinner;
+        winner = score.leader();
         state = MatchState.FINISHED;
     }
 
+    /**
+     * Devuelve el balon al centro y a los jugadores a su posicion inicial.
+     */
     private void resetPositions() {
         ball.reset(field);
-        leftPlayer.reset(field.getLeftPlayerStartX(), field.getPlayerStartY());
-        rightPlayer.reset(field.getRightPlayerStartX(), field.getPlayerStartY());
+        leftPlayer.resetPosition(field.getLeftPlayerStartX(), field.getPlayerStartY());
+        rightPlayer.resetPosition(field.getRightPlayerStartX(), field.getPlayerStartY());
     }
 
     /**
@@ -336,91 +325,99 @@ public class Match {
     }
 
     /**
-     * Empuja el balon cuando el cuerpo del jugador lo toca.
+     * Resuelve que pasa cuando el cuerpo de un jugador toca el balon:
+     * primero si lo golpea un tiro de poder, luego si el jugador tiene aura
+     * (lanza su tiro) y si no, el cuerpo empuja el balon.
      */
     private void resolveBallTouch(Player player) {
         if (!player.touchesBall(ball)) {
             return;
         }
-
-        if (ball.isIllusionActive() && ball.getPowerOwner() != null
-                && ball.getPowerOwner() != player) {
+        resolvePowerShotHit(player);
+        if (player.hasAura() && !player.isStunned()) {
+            firePowerShot(player);
             return;
         }
+        pushBall(player);
+    }
 
-        boolean powerTriggered = false;
-        Power activePower = ball.getActivePower();
-        if (activePower != null && ball.getPowerOwner() != null
-                && ball.getPowerOwner() != player) {
-            powerTriggered = activePower.reactsToOpponentTouch();
-            activePower.onBallTouch(ball, ball.getPowerOwner(), player);
-            ball.clearActivePower();
+    /**
+     * Si el balon lleva un tiro de poder y toca al rival de quien lo lanzo,
+     * se aplican el daño y el efecto. Si lo toca su dueño, el tiro se apaga.
+     */
+    private void resolvePowerShotHit(Player player) {
+        if (!ball.hasActiveShot()) {
+            return;
+        }
+        Player owner = ball.getShotOwner();
+        if (owner != player) {
+            ball.getActiveShot().hit(player, owner.getKickMultiplier());
             player.clampHorizontally(field);
         }
+        ball.clearShot();
+    }
 
-        if (player.canAct() && player.isPowerArmed()) {
-            activatePower(player);
-        }
-
-        if (powerTriggered) {
-            return;
-        }
-
+    /**
+     * Empuja el balon alejandolo del centro del jugador.
+     */
+    private void pushBall(Player player) {
         double dx = ball.getX() - player.getX();
         double direction;
         if (Math.abs(dx) < 0.001) {
             direction = player.getAttackDirection();
+        } else if (dx > 0) {
+            direction = 1;
         } else {
-            if (dx > 0) {
-                direction = 1;
-            } else {
-                direction = -1;
-            }
+            direction = -1;
         }
         double minDistance = player.getWidth() / 2 + ball.getRadius();
         if (ball.getVelocityX() * direction <= 0) {
             ball.setPosition(player.getX() + direction * minDistance, ball.getY());
         }
-        double touchSpeed = player.getTouchSpeed();
-        if (ball.getVelocityX() * direction < touchSpeed) {
-            ball.setVelocity(direction * touchSpeed,
+        if (ball.getVelocityX() * direction < Player.TOUCH_SPEED) {
+            ball.setVelocity(direction * Player.TOUCH_SPEED,
                     Math.min(ball.getVelocityY(), -Player.TOUCH_LIFT));
         }
     }
 
     /**
-     * Devuelve los balones que le quedan a un lado en supervivencia.
+     * Devuelve la configuracion del partido.
      */
-    public int getRemainingBalls(Side side) {
-        if (side == Side.LEFT) {
-            return remainingBallsLeft;
-        }
-        if (side == Side.RIGHT) {
-            return remainingBallsRight;
-        }
-        throw new IllegalArgumentException("El lado no puede ser null");
-    }
-
     public MatchConfig getConfig() {
         return config;
     }
 
+    /**
+     * Devuelve la cancha.
+     */
     public Field getField() {
         return field;
     }
 
+    /**
+     * Devuelve el balon.
+     */
     public Ball getBall() {
         return ball;
     }
 
+    /**
+     * Devuelve el marcador.
+     */
     public Score getScore() {
         return score;
     }
 
+    /**
+     * Devuelve el jugador izquierdo.
+     */
     public Player getLeftPlayer() {
         return leftPlayer;
     }
 
+    /**
+     * Devuelve el jugador derecho.
+     */
     public Player getRightPlayer() {
         return rightPlayer;
     }
@@ -438,26 +435,51 @@ public class Match {
         throw new IllegalArgumentException("El lado no puede ser null");
     }
 
+    /**
+     * Devuelve el estado del partido.
+     */
     public MatchState getState() {
         return state;
     }
 
+    /**
+     * Devuelve los segundos que quedan (partido por tiempo).
+     */
     public double getTimeLeft() {
         return timeLeft;
     }
 
+    /**
+     * Devuelve los segundos que faltan para reanudar despues de un gol.
+     */
     public double getGoalPauseRemaining() {
         return goalPauseRemaining;
     }
 
-    public boolean isGoldenGoal() {
-        return goldenGoal;
+    /**
+     * Devuelve si se esta jugando la muerte subita.
+     */
+    public boolean isSuddenDeath() {
+        return suddenDeath;
     }
 
+    /**
+     * Devuelve si el partido se termino antes de tiempo.
+     */
+    public boolean wasEndedEarly() {
+        return endedEarly;
+    }
+
+    /**
+     * Devuelve el ganador, o NONE si aun no hay.
+     */
     public Winner getWinner() {
         return winner;
     }
 
+    /**
+     * Devuelve si el partido ya termino.
+     */
     public boolean isFinished() {
         return state == MatchState.FINISHED;
     }

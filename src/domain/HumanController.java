@@ -61,7 +61,7 @@ public class HumanController implements PlayerController {
             kickRequested = false;
         }
         if (powerRequested) {
-            match.armPower(side);
+            match.activatePower(side);
             powerRequested = false;
         }
     }

@@ -57,8 +57,8 @@ public class MachineController implements PlayerController {
         Player self = match.getPlayer(side);
         Ball ball = match.getBall();
 
-        if (self.isPowerReady() && !self.isPowerArmed()) {
-            match.armPower(side);
+        if (self.getPowerBar().isFull() && !self.hasAura()) {
+            match.activatePower(side);
         }
 
         reactionTimer = reactionTimer - dt;

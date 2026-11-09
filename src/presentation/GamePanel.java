@@ -35,19 +35,29 @@ import javax.swing.KeyStroke;
 import javax.swing.Timer;
 
 import domain.Ball;
+import domain.BlueAuraShot;
+import domain.ConfusionEffect;
+import domain.Effect;
+import domain.ElectrocutedEffect;
 import domain.Field;
 import domain.GameMode;
 import domain.Goal;
 import domain.Hitbox;
 import domain.HumanController;
+import domain.LightningShot;
 import domain.Match;
 import domain.MatchState;
-import domain.MatchType;
 import domain.DOPOSoccer;
 import domain.Player;
 import domain.PlayerController;
+import domain.PowerShot;
+import domain.PushEffect;
 import domain.Score;
 import domain.Side;
+import domain.StatType;
+import domain.Stats;
+import domain.TornadoShot;
+import domain.UnconsciousEffect;
 import domain.Winner;
 
 /**
@@ -62,6 +72,8 @@ public final class GamePanel extends JPanel implements ActionListener {
     private static final int TIMER_DELAY = 16;
     private static final int STANDS_BOTTOM = 290;
     private static final int BOARDS_HEIGHT = 28;
+    private static final int VIEW_WIDTH = 1280;
+    private static final int VIEW_HEIGHT = 720;
 
     private final transient DOPOSoccer session;
     private final transient Runnable onMenu;
@@ -79,16 +91,21 @@ public final class GamePanel extends JPanel implements ActionListener {
     private MatchState lastState;
     private int lastLeftGoals;
     private int lastRightGoals;
-    private int lastRoundsWon;
+    private final Resolution resolution;
 
-    public GamePanel(DOPOSoccer session, Runnable onMenu, Runnable onRematch) {
+    public GamePanel(DOPOSoccer session, Runnable onMenu, Runnable onRematch, Resolution resolution) {
         if (session == null) {
             throw new IllegalArgumentException("La sesion no puede ser null");
         }
         this.session = session;
         this.onMenu = onMenu;
         this.onRematch = onRematch;
-        setPreferredSize(new Dimension(1280, 720));
+        if (resolution == null) {
+            this.resolution = Resolution.MEDIUM;
+        } else {
+            this.resolution = resolution;
+        }
+        setPreferredSize(new Dimension(this.resolution.getWidth(), this.resolution.getHeight()));
         setOpaque(true);
         setBackground(UiTheme.BG_TOP);
         setFocusable(true);
@@ -98,7 +115,6 @@ public final class GamePanel extends JPanel implements ActionListener {
         lastState = match.getState();
         lastLeftGoals = match.getScore().getLeftGoals();
         lastRightGoals = match.getScore().getRightGoals();
-        lastRoundsWon = 0;
 
         generateCrowd();
         installKeyBindings();
@@ -155,6 +171,7 @@ public final class GamePanel extends JPanel implements ActionListener {
         bindPress(KeyEvent.VK_ESCAPE, "pause", this::togglePause);
         bindPress(KeyEvent.VK_P, "pauseKey", this::togglePause);
         bindPress(KeyEvent.VK_M, "menu", this::goToMenu);
+        bindPress(KeyEvent.VK_T, "endMatch", this::endMatch);
         bindPress(KeyEvent.VK_R, "rematch", this::rematch);
         bindPress(KeyEvent.VK_ENTER, "rematchEnter", this::rematch);
     }
@@ -216,6 +233,15 @@ public final class GamePanel extends JPanel implements ActionListener {
         if (controller != null) {
             controller.requestPower();
         }
+    }
+
+    /**
+     * Termina el partido en este momento (requisito: terminar en cualquier momento).
+     */
+    private void endMatch() {
+        session.endMatch();
+        clearInput();
+        repaint();
     }
 
     /**
@@ -409,15 +435,6 @@ public final class GamePanel extends JPanel implements ActionListener {
             bannerUntil = now + 1_200_000_000L;
         }
 
-        if (session.isSurvival()) {
-            int roundsWon = session.getRoundsWon();
-            if (roundsWon > lastRoundsWon) {
-                banner = "RONDA GANADA";
-                bannerUntil = now + 2_000_000_000L;
-            }
-            lastRoundsWon = roundsWon;
-        }
-
         if (session.isFinished()) {
             banner = null;
         }
@@ -432,6 +449,7 @@ public final class GamePanel extends JPanel implements ActionListener {
         super.paintComponent(graphics);
         Graphics2D g2 = (Graphics2D) graphics.create();
         UiTheme.enableAntialiasing(g2);
+        g2.scale(resolution.getScale(), resolution.getScale());
         drawBackground(g2);
 
         Match match = session.getMatch();
@@ -461,16 +479,16 @@ public final class GamePanel extends JPanel implements ActionListener {
      * Dibuja el estadio: cielo nocturno, dos tribunas con publico y reflectores.
      */
     private void drawBackground(Graphics2D g2) {
-        UiTheme.paintVerticalGradient(g2, getWidth(), getHeight(),
+        UiTheme.paintVerticalGradient(g2, VIEW_WIDTH, VIEW_HEIGHT,
                 UiTheme.BG_TOP, UiTheme.BG_BOTTOM);
 
         g2.setPaint(new GradientPaint(0, 0, new Color(18, 27, 45),
                 0, STANDS_BOTTOM, new Color(26, 38, 60)));
-        g2.fillRect(0, 0, getWidth(), STANDS_BOTTOM);
+        g2.fillRect(0, 0, VIEW_WIDTH, STANDS_BOTTOM);
         g2.setColor(new Color(10, 16, 28));
-        g2.fillRect(0, 144, getWidth(), 16);
+        g2.fillRect(0, 144, VIEW_WIDTH, 16);
         g2.setColor(UiTheme.withAlpha(Color.WHITE, 18));
-        g2.fillRect(0, 144, getWidth(), 2);
+        g2.fillRect(0, 144, VIEW_WIDTH, 2);
 
         for (CrowdDot dot : crowd) {
             g2.setColor(UiTheme.withAlpha(dot.color, 175));
@@ -478,26 +496,26 @@ public final class GamePanel extends JPanel implements ActionListener {
         }
 
         g2.setPaint(new RadialGradientPaint(
-                new Point2D.Double(getWidth() * 0.18, -40),
+                new Point2D.Double(VIEW_WIDTH * 0.18, -40),
                 560,
                 new float[] {0f, 1f},
                 new Color[] {UiTheme.withAlpha(new Color(255, 244, 214), 32),
                         UiTheme.withAlpha(new Color(255, 244, 214), 0)}));
-        g2.fillRect(0, 0, getWidth() / 2, STANDS_BOTTOM + 200);
+        g2.fillRect(0, 0, VIEW_WIDTH / 2, STANDS_BOTTOM + 200);
         g2.setPaint(new RadialGradientPaint(
-                new Point2D.Double(getWidth() * 0.82, -40),
+                new Point2D.Double(VIEW_WIDTH * 0.82, -40),
                 560,
                 new float[] {0f, 1f},
                 new Color[] {UiTheme.withAlpha(new Color(255, 244, 214), 32),
                         UiTheme.withAlpha(new Color(255, 244, 214), 0)}));
-        g2.fillRect(getWidth() / 2, 0, getWidth() / 2, STANDS_BOTTOM + 200);
+        g2.fillRect(VIEW_WIDTH / 2, 0, VIEW_WIDTH / 2, STANDS_BOTTOM + 200);
     }
 
     /**
      * Dibuja las vallas publicitarias, el pasto con franjas y la franja del HUD.
      */
     private void drawArena(Graphics2D g2, Field field) {
-        int width = getWidth();
+        int width = VIEW_WIDTH;
         int ground = (int) field.getGroundY();
 
         g2.setColor(new Color(12, 18, 31));
@@ -526,8 +544,8 @@ public final class GamePanel extends JPanel implements ActionListener {
         g2.fillRect(0, grassTop, width, ground - grassTop);
 
         g2.setPaint(new GradientPaint(0, ground, UiTheme.HUD_BAND,
-                0, getHeight(), UiTheme.BG_TOP));
-        g2.fillRect(0, ground, width, getHeight() - ground);
+                0, VIEW_HEIGHT, UiTheme.BG_TOP));
+        g2.fillRect(0, ground, width, VIEW_HEIGHT - ground);
         g2.setColor(UiTheme.withAlpha(Color.WHITE, 200));
         g2.fillRect(0, ground, width, 3);
     }
@@ -537,7 +555,7 @@ public final class GamePanel extends JPanel implements ActionListener {
      */
     private void drawMarkings(Graphics2D g2, Field field) {
         int ground = (int) field.getGroundY();
-        int cx = getWidth() / 2;
+        int cx = VIEW_WIDTH / 2;
         int grassTop = STANDS_BOTTOM + BOARDS_HEIGHT;
 
         g2.setColor(UiTheme.withAlpha(Color.WHITE, 120));
@@ -596,6 +614,9 @@ public final class GamePanel extends JPanel implements ActionListener {
         Color sideColor = left ? UiTheme.LEFT_COLOR : UiTheme.RIGHT_COLOR;
         Color primary = UiTheme.countryPrimary(player.getCharacter());
         Color secondary = UiTheme.countrySecondary(player.getCharacter());
+        if (player.hasAura()) {
+            drawAura(g2, bounds, shotColor(player.getCharacter().getPowerShot()));
+        }
 
         g2.setColor(new Color(0, 0, 0, 80));
         g2.fillOval((int) (cx - bounds.width * 0.62), (int) (ground - 10),
@@ -656,21 +677,18 @@ public final class GamePanel extends JPanel implements ActionListener {
         g2.draw(new Arc2D.Double(cx - headRadius * 0.26, headCenterY + headRadius * 0.28,
                 headRadius * 0.52, headRadius * 0.3, 200, 140, Arc2D.OPEN));
 
-        if (player.isPowerArmed()) {
-            float pulse = (float) (0.5 + 0.5 * Math.sin(animationTime * 8));
-            g2.setColor(UiTheme.withAlpha(UiTheme.GOLD, (int) (70 + 90 * pulse)));
-            g2.setStroke(new BasicStroke(5f));
-            g2.draw(new RoundRectangle2D.Double(bounds.x - 7, bounds.y - 7,
-                    bounds.width + 14, bounds.height + 14, 26, 26));
-        }
-        if (player.isFrozen()) {
-            drawFrozenPlayer(g2, bounds);
+        Effect effect = player.getEffect();
+        if (effect instanceof ElectrocutedEffect) {
+            drawElectrocuted(g2, bounds);
+        } else if (effect instanceof PushEffect) {
+            drawPushed(g2, bounds, player.getVelocityX());
+        } else if (effect instanceof UnconsciousEffect) {
+            drawStunStars(g2, cx, headCenterY - headRadius - 12);
+        } else if (effect instanceof ConfusionEffect) {
+            drawConfused(g2, cx, headCenterY - headRadius - 16);
         }
         if (player.isStunned()) {
             drawStunStars(g2, cx, headCenterY - headRadius - 12);
-        }
-        if (player.isConfused()) {
-            drawConfused(g2, cx, headCenterY - headRadius - 16);
         }
     }
 
@@ -694,38 +712,61 @@ public final class GamePanel extends JPanel implements ActionListener {
                 radius * 0.9, radius * 1.04));
     }
 
-    private void drawFrozenPlayer(Graphics2D g2, Rectangle2D.Double bounds) {
-        Composite old = g2.getComposite();
-        g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.38f));
-        g2.setColor(UiTheme.ICE);
-        g2.fill(new RoundRectangle2D.Double(bounds.x - 5, bounds.y - 5,
-                bounds.width + 10, bounds.height + 10, 18, 18));
-        g2.setComposite(old);
-        g2.setColor(new Color(220, 248, 255));
-        g2.setStroke(new BasicStroke(3f));
-        g2.draw(new RoundRectangle2D.Double(bounds.x - 5, bounds.y - 5,
-                bounds.width + 10, bounds.height + 10, 18, 18));
-        drawSnowflake(g2, bounds.getCenterX(), bounds.getCenterY(), bounds.width * 0.32);
+    /**
+     * Dibuja chispas amarillas alrededor del jugador electrocutado.
+     */
+    private void drawElectrocuted(Graphics2D g2, Rectangle2D.Double bounds) {
+        g2.setColor(new Color(255, 230, 80));
+        g2.setStroke(new BasicStroke(2.5f));
+        for (int i = 0; i < 4; i++) {
+            double angle = animationTime * 6 + i * Math.PI / 2;
+            double sx = bounds.getCenterX() + Math.cos(angle) * bounds.width * 0.7;
+            double sy = bounds.getCenterY() + Math.sin(angle) * bounds.height * 0.45;
+            Path2D bolt = new Path2D.Double();
+            bolt.moveTo(sx, sy - 10);
+            bolt.lineTo(sx + 5, sy - 2);
+            bolt.lineTo(sx - 3, sy + 1);
+            bolt.lineTo(sx + 4, sy + 10);
+            g2.draw(bolt);
+        }
     }
 
-    private void drawSnowflake(Graphics2D g2, double x, double y, double radius) {
-        g2.setColor(UiTheme.withAlpha(Color.WHITE, 210));
-        g2.setStroke(new BasicStroke(2.4f));
-        for (int i = 0; i < 6; i++) {
-            double angle = Math.PI * i / 3;
-            double x2 = x + Math.cos(angle) * radius;
-            double y2 = y + Math.sin(angle) * radius;
-            g2.drawLine((int) x, (int) y, (int) x2, (int) y2);
-            double branch = radius * 0.32;
-            double bx = x + Math.cos(angle) * radius * 0.68;
-            double by = y + Math.sin(angle) * radius * 0.68;
-            g2.drawLine((int) bx, (int) by,
-                    (int) (bx + Math.cos(angle + 0.7) * branch),
-                    (int) (by + Math.sin(angle + 0.7) * branch));
-            g2.drawLine((int) bx, (int) by,
-                    (int) (bx + Math.cos(angle - 0.7) * branch),
-                    (int) (by + Math.sin(angle - 0.7) * branch));
+    /**
+     * Dibuja lineas de velocidad detras del jugador empujado.
+     */
+    private void drawPushed(Graphics2D g2, Rectangle2D.Double bounds, double velocityX) {
+        g2.setColor(UiTheme.withAlpha(new Color(86, 170, 255), 200));
+        g2.setStroke(new BasicStroke(3f));
+        double back;
+        if (velocityX > 0) {
+            back = bounds.x - 6;
+        } else {
+            back = bounds.x + bounds.width + 6;
         }
+        double direction;
+        if (velocityX > 0) {
+            direction = -1;
+        } else {
+            direction = 1;
+        }
+        for (int i = 0; i < 3; i++) {
+            double y = bounds.y + bounds.height * (0.3 + i * 0.2);
+            g2.drawLine((int) back, (int) y, (int) (back + direction * 26), (int) y);
+        }
+    }
+
+    /**
+     * Dibuja el aura del poder activo alrededor del jugador.
+     */
+    private void drawAura(Graphics2D g2, Rectangle2D.Double bounds, Color color) {
+        float pulse = (float) (0.5 + 0.5 * Math.sin(animationTime * 8));
+        g2.setColor(UiTheme.withAlpha(color, (int) (60 + 70 * pulse)));
+        g2.fill(new Ellipse2D.Double(bounds.x - 18, bounds.y - 18,
+                bounds.width + 36, bounds.height + 36));
+        g2.setColor(UiTheme.withAlpha(color, 220));
+        g2.setStroke(new BasicStroke(3f));
+        g2.draw(new Ellipse2D.Double(bounds.x - 18, bounds.y - 18,
+                bounds.width + 36, bounds.height + 36));
     }
 
     private void drawStunStars(Graphics2D g2, double x, double y) {
@@ -757,33 +798,48 @@ public final class GamePanel extends JPanel implements ActionListener {
         g2.fillOval((int) (ball.getX() - ball.getRadius() * 1.1), (int) (ground - 7),
                 (int) (ball.getRadius() * 2.2), 11);
 
-        if (ball.isPushCharged()) {
+        if (ball.hasActiveShot() && ball.getDecoyCount() == 0) {
             float pulse = (float) (0.5 + 0.5 * Math.sin(animationTime * 9));
-            g2.setColor(UiTheme.withAlpha(new Color(86, 200, 255), (int) (70 + 80 * pulse)));
+            Color glowColor = shotColor(ball.getActiveShot());
+            g2.setColor(UiTheme.withAlpha(glowColor, (int) (80 + 90 * pulse)));
             double glow = ball.getRadius() * (1.9 + pulse * 0.5);
             g2.fill(new Ellipse2D.Double(ball.getX() - glow, ball.getY() - glow,
                     glow * 2, glow * 2));
         }
 
-        if (ball.isIllusionActive()) {
-            int decoys = Math.max(1, ball.getDecoyCount());
-            for (int i = 0; i < decoys; i++) {
-                double angle = animationTime * 2.4 + i * Math.PI * 2 / decoys;
-                double distance = ball.getRadius() * (2.6 + 0.5 * Math.sin(animationTime * 3 + i));
-                double x = ball.getX() + Math.cos(angle) * distance * 1.5;
-                double y = ball.getY() + Math.sin(angle) * distance * 0.8;
-                drawBallShape(g2, x, y, ball.getRadius() * 0.9, 90);
+        int decoys = ball.getDecoyCount();
+        double spacing = ball.getRadius() * 2.8;
+        for (int i = 0; i < decoys; i++) {
+            double offsetX;
+            double offsetY = 0;
+            if (i < 3) {
+                offsetX = -(i + 1) * spacing;
+            } else if (i < 6) {
+                offsetX = (i - 2) * spacing;
+            } else {
+                offsetX = 0;
+                offsetY = -spacing;
             }
+            drawBallShape(g2, ball.getX() + offsetX, ball.getY() + offsetY, ball.getRadius(), 255);
         }
 
         drawBallShape(g2, ball.getX(), ball.getY(), ball.getRadius(), 255);
-        if (ball.isIllusionActive()) {
-            g2.setColor(UiTheme.withAlpha(UiTheme.GOLD, 190));
-            g2.setStroke(new BasicStroke(2f));
-            g2.draw(new Ellipse2D.Double(ball.getX() - ball.getRadius() - 4,
-                    ball.getY() - ball.getRadius() - 4,
-                    (ball.getRadius() + 4) * 2, (ball.getRadius() + 4) * 2));
+    }
+
+    /**
+     * Devuelve el color del brillo de cada tiro de poder.
+     */
+    private Color shotColor(PowerShot shot) {
+        if (shot instanceof BlueAuraShot) {
+            return new Color(86, 170, 255);
         }
+        if (shot instanceof LightningShot) {
+            return new Color(255, 230, 80);
+        }
+        if (shot instanceof TornadoShot) {
+            return new Color(190, 235, 200);
+        }
+        return new Color(230, 140, 255);
     }
 
     private void drawBallShape(Graphics2D g2, double x, double y, double radius, int alpha) {
@@ -831,7 +887,7 @@ public final class GamePanel extends JPanel implements ActionListener {
         Score score = match.getScore();
         int boardWidth = 620;
         int boardHeight = 96;
-        int boardX = (getWidth() - boardWidth) / 2;
+        int boardX = (VIEW_WIDTH - boardWidth) / 2;
         int boardY = 16;
 
         g2.setColor(UiTheme.withAlpha(UiTheme.PANEL, 225));
@@ -855,209 +911,198 @@ public final class GamePanel extends JPanel implements ActionListener {
         g2.setFont(UiTheme.font(Font.BOLD, 46));
         g2.setColor(UiTheme.TEXT);
         drawCentered(g2, score.getLeftGoals() + "  -  " + score.getRightGoals(),
-                getWidth() / 2, boardY + 56);
+                VIEW_WIDTH / 2, boardY + 56);
 
         String subtitle = matchSubtitle(match);
         g2.setFont(UiTheme.font(Font.BOLD, 13));
-        g2.setColor(match.isGoldenGoal() ? UiTheme.GOLD : UiTheme.MUTED);
-        drawCentered(g2, subtitle, getWidth() / 2, boardY + 82);
-
-        if (session.getConfig().getMatchType() == MatchType.SURVIVAL) {
-            drawBallsLeft(g2, true);
-            drawBallsLeft(g2, false);
+        if (match.isSuddenDeath()) {
+            g2.setColor(UiTheme.GOLD);
+        } else {
+            g2.setColor(UiTheme.MUTED);
         }
+        drawCentered(g2, subtitle, VIEW_WIDTH / 2, boardY + 82);
 
-        drawPowerBar(g2, match.getLeftPlayer(), true);
-        drawPowerBar(g2, match.getRightPlayer(), false);
+        g2.setFont(UiTheme.font(Font.PLAIN, 11));
+        g2.setColor(UiTheme.MUTED);
+        g2.drawString(statsLabel(match.getLeftPlayer()), boardX + 22, boardY + 70);
+        drawRight(g2, statsLabel(match.getRightPlayer()), boardX + boardWidth - 22, boardY + 70);
+        g2.drawString("Puntos " + match.getLeftPlayer().getProfile().getPoints(), boardX + 22, boardY + 86);
+        drawRight(g2, "Puntos " + match.getRightPlayer().getProfile().getPoints(),
+                boardX + boardWidth - 22, boardY + 86);
+
+        drawPlayerPanel(g2, match.getLeftPlayer(), true);
+        drawPlayerPanel(g2, match.getRightPlayer(), false);
         drawBottomHints(g2);
     }
 
+    /**
+     * Devuelve el texto del tiempo o de la meta que va bajo el marcador.
+     */
     private String matchSubtitle(Match match) {
-        MatchType type = session.getConfig().getMatchType();
-        if (match.isGoldenGoal()) {
-            return "GOL DE ORO";
+        if (match.isSuddenDeath()) {
+            return "MUERTE SUBITA";
         }
-        if (type == MatchType.TIME) {
+        if (session.getConfig().isTimed()) {
             return formatTime(match.getTimeLeft());
         }
-        if (type == MatchType.GOALS) {
-            return "PRIMERO A " + session.getConfig().getGoalsTarget();
-        }
-        return "RONDA " + (session.getRoundsPlayed() + 1)
-                + "   |   GANADAS " + session.getRoundsWon();
+        return "PRIMERO A " + session.getConfig().getGoalsTarget();
     }
 
+    /**
+     * Convierte segundos al formato mm:ss.
+     */
     private String formatTime(double seconds) {
         int total = (int) Math.ceil(Math.max(0, seconds));
         return String.format("%02d:%02d", total / 60, total % 60);
     }
 
-    private void drawBallsLeft(Graphics2D g2, boolean left) {
-        int remaining = session.getRemainingBalls(left ? Side.LEFT : Side.RIGHT);
-        int x = left ? 34 : getWidth() - 34;
-        int y = 44;
-        drawBallIcon(g2, x, y, 11);
-        g2.setFont(UiTheme.font(Font.BOLD, 22));
-        g2.setColor(left ? UiTheme.LEFT_COLOR : UiTheme.RIGHT_COLOR);
-        String text = "x " + remaining;
-        if (left) {
-            g2.drawString(text, x + 20, y + 8);
-        } else {
-            drawRight(g2, text, x - 20, y + 8);
-        }
-    }
-
-    private void drawBallIcon(Graphics2D g2, double x, double y, double radius) {
-        g2.setColor(new Color(247, 250, 255));
-        g2.fill(new Ellipse2D.Double(x - radius, y - radius, radius * 2, radius * 2));
-        g2.setColor(new Color(26, 36, 56));
-        g2.fill(pentagon(x, y, radius * 0.45, 0.3));
-        g2.setStroke(new BasicStroke(1.4f));
-        g2.draw(new Ellipse2D.Double(x - radius, y - radius, radius * 2, radius * 2));
+    /**
+     * Devuelve las estadisticas del jugador en una linea corta.
+     */
+    private String statsLabel(Player player) {
+        Stats stats = player.getProfile().getStats();
+        return "SPD " + stats.get(StatType.SPEED) + "  KCK " + stats.get(StatType.KICK)
+                + "  JMP " + stats.get(StatType.JUMP) + "  SRV " + stats.get(StatType.SURVIVAL);
     }
 
     /**
-     * Dibuja la barra de poder de un jugador con su poder y los efectos que sufre.
+     * Dibuja la informacion de un jugador en la franja de abajo: tiro de poder,
+     * efecto o aturdimiento, barra de vida y barra de poder.
      */
-    private void drawPowerBar(Graphics2D g2, Player player, boolean left) {
-        int barWidth = 300;
-        int barHeight = 20;
-        int x = left ? 36 : getWidth() - 36 - barWidth;
-        int y = getHeight() - 40;
-        Color color = left ? UiTheme.LEFT_COLOR : UiTheme.RIGHT_COLOR;
+    private void drawPlayerPanel(Graphics2D g2, Player player, boolean left) {
+        int width = 330;
+        int x;
+        Color sideColor;
+        if (left) {
+            x = 36;
+            sideColor = UiTheme.LEFT_COLOR;
+        } else {
+            x = VIEW_WIDTH - 36 - width;
+            sideColor = UiTheme.RIGHT_COLOR;
+        }
 
         g2.setFont(UiTheme.font(Font.BOLD, 13));
         g2.setColor(UiTheme.TEXT);
-        String label = "PODER  " + player.getCharacter().getPower().getName().toUpperCase();
+        String shot = "PODER  " + player.getCharacter().getPowerShot().getName().toUpperCase();
+        String status = statusLabel(player);
         if (left) {
-            g2.drawString(label, x, y - 9);
+            g2.drawString(shot, x, 658);
         } else {
-            drawRight(g2, label, x + barWidth, y - 9);
+            drawRight(g2, shot, x + width, 658);
         }
-
-        String effects = effectsLabel(player);
-        if (!effects.isEmpty()) {
+        if (!status.isEmpty()) {
             g2.setFont(UiTheme.font(Font.BOLD, 12));
             g2.setColor(UiTheme.ICE);
             if (left) {
-                drawRight(g2, effects, x + barWidth, y - 9);
+                drawRight(g2, status, x + width, 658);
             } else {
-                g2.drawString(effects, x, y - 9);
+                g2.drawString(status, x, 658);
             }
         }
 
-        g2.setColor(UiTheme.withAlpha(UiTheme.PANEL, 230));
-        g2.fill(new RoundRectangle2D.Double(x, y, barWidth, barHeight, 12, 12));
-        g2.setColor(UiTheme.withAlpha(UiTheme.BORDER, 230));
-        g2.setStroke(new BasicStroke(1.5f));
-        g2.draw(new RoundRectangle2D.Double(x, y, barWidth, barHeight, 12, 12));
+        double life = player.getLife() / player.getMaxLife();
+        Color lifeColor = new Color(80, 200, 110);
+        if (life < 0.3) {
+            lifeColor = UiTheme.DANGER;
+        }
+        drawBar(g2, x, 666, width, life, lifeColor,
+                "VIDA  " + (int) Math.ceil(player.getLife()) + " / " + (int) player.getMaxLife(),
+                UiTheme.TEXT);
 
-        double charge = Math.max(0, Math.min(1, player.getPowerCharge()));
-        if (charge > 0) {
-            double fillWidth = Math.max(4, (barWidth - 4) * charge);
-            Color fillColor = color;
-            if (player.isPowerReady()) {
-                fillColor = UiTheme.GOLD;
-            }
-            g2.setPaint(new GradientPaint((float) x, 0, UiTheme.darken(fillColor, 0.18f),
-                    (float) (x + barWidth), 0, UiTheme.lighten(fillColor, 0.28f)));
-            g2.fill(new RoundRectangle2D.Double(x + 2, y + 2, fillWidth, barHeight - 4, 9, 9));
+        double charge = player.getPowerBar().getCharge();
+        Color powerColor = sideColor;
+        Color textColor = UiTheme.TEXT;
+        if (player.getPowerBar().isFull()) {
+            powerColor = UiTheme.GOLD;
+            textColor = UiTheme.BG_TOP;
         }
-
-        for (int i = 1; i < 4; i++) {
-            int tickX = x + barWidth * i / 4;
-            g2.setColor(UiTheme.withAlpha(UiTheme.BG_TOP, 120));
-            g2.drawLine(tickX, y + 3, tickX, y + barHeight - 3);
-        }
-
-        if (player.isPowerReady()) {
-            float pulse = (float) (0.5 + 0.5 * Math.sin(animationTime * 7));
-            g2.setColor(UiTheme.withAlpha(UiTheme.GOLD, (int) (150 + 90 * pulse)));
-            g2.setStroke(new BasicStroke(2.5f));
-            g2.draw(new RoundRectangle2D.Double(x - 2, y - 2,
-                    barWidth + 4, barHeight + 4, 14, 14));
-        }
-
-        g2.setFont(UiTheme.font(Font.BOLD, 11));
-        g2.setColor(UiTheme.TEXT);
-        boolean human;
-        if (left) {
-            human = leftHuman() != null;
-        } else {
-            human = rightHuman() != null;
-        }
-        String status;
-        if (player.isPowerArmed()) {
-            status = "ARMADO - GOLPEA EL BALON";
-        } else if (player.isPowerReady()) {
-            if (!human) {
-                status = "LISTO";
-            } else if (left) {
-                status = "LISTO - PRESIONA Q";
-            } else {
-                status = "LISTO - PRESIONA CTRL DER.";
-            }
-        } else {
-            status = (int) Math.round(charge * 100) + "%";
-        }
-        if (player.isPowerReady()) {
-            g2.setColor(UiTheme.BG_TOP);
-        }
-        drawCentered(g2, status, x + barWidth / 2, y + 14);
+        drawBar(g2, x, 690, width, charge, powerColor, powerLabel(player, left), textColor);
     }
 
     /**
-     * Devuelve los efectos que sufre el jugador, por ejemplo "CONGELADO".
+     * Dibuja una barra redondeada con su relleno (0 a 1) y un texto centrado.
      */
-    private String effectsLabel(Player player) {
-        String text = "";
-        if (player.isFrozen()) {
-            text = addEffect(text, "CONGELADO");
+    private void drawBar(Graphics2D g2, int x, int y, int width, double fill, Color color,
+                         String text, Color textColor) {
+        int height = 18;
+        g2.setColor(UiTheme.withAlpha(UiTheme.PANEL, 230));
+        g2.fill(new RoundRectangle2D.Double(x, y, width, height, 12, 12));
+        g2.setColor(UiTheme.withAlpha(UiTheme.BORDER, 230));
+        g2.setStroke(new BasicStroke(1.5f));
+        g2.draw(new RoundRectangle2D.Double(x, y, width, height, 12, 12));
+        double amount = Math.max(0, Math.min(1, fill));
+        if (amount > 0) {
+            g2.setPaint(new GradientPaint((float) x, 0, UiTheme.darken(color, 0.18f),
+                    (float) (x + width), 0, UiTheme.lighten(color, 0.25f)));
+            g2.fill(new RoundRectangle2D.Double(x + 2, y + 2, Math.max(4, (width - 4) * amount),
+                    height - 4, 9, 9));
         }
-        if (player.isStunned()) {
-            text = addEffect(text, "ATURDIDO");
+        g2.setFont(UiTheme.font(Font.BOLD, 11));
+        g2.setColor(textColor);
+        drawCentered(g2, text, x + width / 2, y + 13);
+    }
+
+    /**
+     * Devuelve el texto de la barra de poder: aura activa, lista o porcentaje.
+     */
+    private String powerLabel(Player player, boolean left) {
+        String text;
+        if (player.hasAura()) {
+            text = "AURA ACTIVA - TOCA EL BALON";
+        } else if (player.getPowerBar().isFull()) {
+            HumanController human;
+            if (left) {
+                human = leftHuman();
+            } else {
+                human = rightHuman();
+            }
+            if (human == null) {
+                text = "PODER LISTO";
+            } else if (left) {
+                text = "PODER LISTO - PRESIONA Q";
+            } else {
+                text = "PODER LISTO - CTRL DERECHO";
+            }
+        } else {
+            text = "PODER  " + (int) Math.round(player.getPowerBar().getCharge() * 100) + "%";
         }
-        if (player.isShrunk()) {
-            text = addEffect(text, "ENCOGIDO");
-        }
-        if (player.isConfused()) {
-            text = addEffect(text, "CONFUNDIDO");
+        if (player.hasAura() && !player.getPowerBar().isFull()) {
+            text = text + "  (" + (int) Math.round(player.getPowerBar().getCharge() * 100) + "%)";
         }
         return text;
     }
 
     /**
-     * Agrega un efecto al texto separandolo con una barra.
+     * Devuelve el aturdimiento o el efecto que sufre el jugador, con los segundos que quedan.
      */
-    private String addEffect(String text, String effect) {
-        if (text.isEmpty()) {
-            return effect;
+    private String statusLabel(Player player) {
+        if (player.isStunned()) {
+            return "ATURDIDO " + String.format("%.1f s", player.getStunTimeLeft());
         }
-        return text + "  |  " + effect;
+        Effect effect = player.getEffect();
+        if (effect != null) {
+            return effect.getName().toUpperCase() + " " + String.format("%.1f s", effect.getTimeLeft());
+        }
+        return "";
     }
 
     /**
-     * Dibuja en el centro de la franja inferior la modalidad y las teclas de pausa.
+     * Dibuja en el centro de la franja inferior la modalidad y las teclas de la partida.
      */
     private void drawBottomHints(Graphics2D g2) {
-        GameMode mode = session.getConfig().getGameMode();
         String text;
-        if (session.isSurvival()) {
-            text = "SUPERVIVENCIA";
-        } else if (mode == GameMode.PVP) {
+        if (session.getConfig().getGameMode() == GameMode.PVP) {
             text = "JUGADOR VS JUGADOR";
-        } else if (mode == GameMode.PVM) {
-            text = "JUGADOR VS MAQUINA";
         } else {
-            text = "MAQUINA VS MAQUINA";
+            text = "JUGADOR VS MAQUINA";
         }
         g2.setFont(UiTheme.font(Font.BOLD, 13));
         g2.setColor(UiTheme.TEXT);
-        drawCentered(g2, text, getWidth() / 2, getHeight() - 42);
+        drawCentered(g2, text, VIEW_WIDTH / 2, 678);
         if (!session.isFinished()) {
             g2.setFont(UiTheme.font(Font.PLAIN, 12));
             g2.setColor(UiTheme.MUTED);
-            drawCentered(g2, "ESC pausa   |   M menu", getWidth() / 2, getHeight() - 20);
+            drawCentered(g2, "ESC pausa  |  T terminar  |  M menu", VIEW_WIDTH / 2, 702);
         }
     }
 
@@ -1079,7 +1124,7 @@ public final class GamePanel extends JPanel implements ActionListener {
         g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
         g2.setFont(UiTheme.font(Font.BOLD, 62));
         FontMetrics metrics = g2.getFontMetrics();
-        int x = (getWidth() - metrics.stringWidth(banner)) / 2;
+        int x = (VIEW_WIDTH - metrics.stringWidth(banner)) / 2;
         int y = 258;
         g2.setColor(UiTheme.withAlpha(Color.BLACK, 150));
         g2.drawString(banner, x + 3, y + 3);
@@ -1090,12 +1135,12 @@ public final class GamePanel extends JPanel implements ActionListener {
 
     private void drawPauseOverlay(Graphics2D g2) {
         g2.setColor(new Color(2, 6, 12, 170));
-        g2.fillRect(0, 0, getWidth(), getHeight());
+        g2.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT);
 
         int width = 520;
         int height = 230;
-        int x = (getWidth() - width) / 2;
-        int y = (getHeight() - height) / 2;
+        int x = (VIEW_WIDTH - width) / 2;
+        int y = (VIEW_HEIGHT - height) / 2;
         g2.setColor(UiTheme.withAlpha(UiTheme.PANEL, 245));
         g2.fill(new RoundRectangle2D.Double(x, y, width, height, 26, 26));
         g2.setColor(UiTheme.withAlpha(UiTheme.BORDER, 240));
@@ -1104,25 +1149,25 @@ public final class GamePanel extends JPanel implements ActionListener {
 
         g2.setFont(UiTheme.font(Font.BOLD, 44));
         g2.setColor(UiTheme.TEXT);
-        drawCentered(g2, "PAUSA", getWidth() / 2, y + 66);
+        drawCentered(g2, "PAUSA", VIEW_WIDTH / 2, y + 66);
         g2.setFont(UiTheme.font(Font.BOLD, 17));
         g2.setColor(UiTheme.MUTED);
-        drawCentered(g2, "ESC / P  continuar", getWidth() / 2, y + 118);
-        drawCentered(g2, "M  volver al menu", getWidth() / 2, y + 150);
+        drawCentered(g2, "ESC / P  continuar", VIEW_WIDTH / 2, y + 118);
+        drawCentered(g2, "T  terminar el partido      M  volver al menu", VIEW_WIDTH / 2, y + 150);
         g2.setFont(UiTheme.font(Font.PLAIN, 13));
         g2.setColor(UiTheme.withAlpha(UiTheme.MUTED, 190));
         drawCentered(g2, "La partida queda exactamente donde la dejaste",
-                getWidth() / 2, y + 190);
+                VIEW_WIDTH / 2, y + 190);
     }
 
     private void drawResultOverlay(Graphics2D g2, Match match) {
         g2.setColor(new Color(2, 6, 12, 195));
-        g2.fillRect(0, 0, getWidth(), getHeight());
+        g2.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT);
 
         int width = 660;
         int height = 380;
-        int x = (getWidth() - width) / 2;
-        int y = (getHeight() - height) / 2;
+        int x = (VIEW_WIDTH - width) / 2;
+        int y = (VIEW_HEIGHT - height) / 2;
         g2.setColor(UiTheme.withAlpha(UiTheme.PANEL, 248));
         g2.fill(new RoundRectangle2D.Double(x, y, width, height, 30, 30));
         g2.setColor(UiTheme.withAlpha(UiTheme.BORDER, 240));
@@ -1132,50 +1177,44 @@ public final class GamePanel extends JPanel implements ActionListener {
         g2.fill(new RoundRectangle2D.Double(x + width * 0.3, y + 20, width * 0.4, 4, 4, 4));
 
         String header = "PARTIDO TERMINADO";
-        if (session.isSurvival()) {
-            header = "SERIE DE SUPERVIVENCIA";
-        } else if (session.getWinner() == Winner.LEFT) {
+        if (session.getWinner() == Winner.LEFT) {
             header = header + "   |   " + roleLabel(true);
         } else if (session.getWinner() == Winner.RIGHT) {
             header = header + "   |   " + roleLabel(false);
         }
         g2.setFont(UiTheme.font(Font.BOLD, 14));
         g2.setColor(UiTheme.GOLD);
-        drawCentered(g2, header, getWidth() / 2, y + 58);
+        drawCentered(g2, header, VIEW_WIDTH / 2, y + 58);
 
         g2.setFont(UiTheme.font(Font.BOLD, 40));
         g2.setColor(UiTheme.TEXT);
-        drawCentered(g2, resultTitle(), getWidth() / 2, y + 112);
+        drawCentered(g2, resultTitle(), VIEW_WIDTH / 2, y + 112);
 
         if (match != null) {
             g2.setFont(UiTheme.font(Font.BOLD, 56));
             g2.setColor(UiTheme.GOLD);
             drawCentered(g2, match.getScore().getLeftGoals() + "  -  "
-                    + match.getScore().getRightGoals(), getWidth() / 2, y + 182);
+                    + match.getScore().getRightGoals(), VIEW_WIDTH / 2, y + 182);
         }
 
         g2.setFont(UiTheme.font(Font.BOLD, 17));
         g2.setColor(UiTheme.MUTED);
-        if (session.isSurvival()) {
-            drawCentered(g2, "Rondas ganadas: " + session.getRoundsWon(),
-                    getWidth() / 2, y + 228);
-            drawCentered(g2, "Rondas jugadas: " + session.getRoundsPlayed(),
-                    getWidth() / 2, y + 256);
-        } else {
-            drawCentered(g2, session.getLeftCharacter().getName() + "  vs  "
-                    + session.getRightCharacter().getName(), getWidth() / 2, y + 228);
-            drawCentered(g2, "Poderes: " + session.getLeftCharacter().getPower().getName()
-                    + "  /  " + session.getRightCharacter().getPower().getName(),
-                    getWidth() / 2, y + 256);
-        }
+        drawCentered(g2, session.getLeftCharacter().getName() + "  vs  "
+                + session.getRightCharacter().getName(), VIEW_WIDTH / 2, y + 228);
+        g2.setColor(UiTheme.GOLD);
+        drawCentered(g2, session.getLeftProfile().getName() + "  +" + session.getPointsEarned(Side.LEFT)
+                + " puntos (total " + session.getLeftProfile().getPoints() + ")      "
+                + session.getRightProfile().getName() + "  +" + session.getPointsEarned(Side.RIGHT)
+                + " puntos (total " + session.getRightProfile().getPoints() + ")",
+                VIEW_WIDTH / 2, y + 260);
 
         g2.setFont(UiTheme.font(Font.BOLD, 16));
         g2.setColor(UiTheme.TEXT);
-        drawCentered(g2, "R / ENTER  revancha          M  menu", getWidth() / 2, y + 326);
+        drawCentered(g2, "R / ENTER  revancha          M  menu", VIEW_WIDTH / 2, y + 326);
         g2.setFont(UiTheme.font(Font.PLAIN, 12));
         g2.setColor(UiTheme.withAlpha(UiTheme.MUTED, 180));
         drawCentered(g2, "La revancha conserva la misma configuracion",
-                getWidth() / 2, y + 350);
+                VIEW_WIDTH / 2, y + 350);
     }
 
     /**
@@ -1183,11 +1222,8 @@ public final class GamePanel extends JPanel implements ActionListener {
      */
     private String resultTitle() {
         Winner winner = session.getWinner();
-        if (session.isSurvival()) {
-            return "SERIE TERMINADA";
-        }
         if (winner == Winner.NONE) {
-            return "EMPATE";
+            return "TERMINADO SIN GANADOR";
         }
         if (winner == Winner.LEFT) {
             return "GANA " + session.getLeftCharacter().getName().toUpperCase();

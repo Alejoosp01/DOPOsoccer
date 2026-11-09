@@ -14,13 +14,7 @@ public class HumanControllerTest {
 
     @BeforeEach
     public void setUp() throws DOPOSoccerException {
-        GameCharacter leftCharacter = new GameCharacter(
-                "Left", new Country("Left", new FreezePower()), 3, 3, 3);
-        GameCharacter rightCharacter = new GameCharacter(
-                "Right", new Country("Right", new FreezePower()), 3, 3, 3);
-        Player right = new Player(rightCharacter, false, 0, 0);
-        match = new Match(MatchConfig.time(GameMode.PVP),
-                new Player(leftCharacter, true, 0, 0), right);
+        match = new Match(TestData.byTime(GameMode.PVP, 1), TestData.player(true), TestData.player(false));
         runner = new MatchRunner(match, new HumanController(), new HumanController());
         controller = (HumanController) runner.getLeftController();
         left = match.getLeftPlayer();
@@ -83,13 +77,13 @@ public class HumanControllerTest {
     }
 
     @Test
-    public void shouldArmPowerOnRequestAndConsumeIt() {
+    public void shouldActivateAuraOnRequestAndConsumeIt() {
         fillPower(left);
         controller.requestPower();
 
         runner.update(0.01);
 
-        assertTrue(left.isPowerArmed());
+        assertTrue(left.hasAura());
         assertFalse(controller.isPowerRequested());
     }
 
@@ -107,8 +101,6 @@ public class HumanControllerTest {
     }
 
     private void fillPower(Player player) {
-        for (int i = 0; i < 100; i++) {
-            player.update(0.1, match.getField());
-        }
+        TestData.fillPowerBar(player);
     }
 }

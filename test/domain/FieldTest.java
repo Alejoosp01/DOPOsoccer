@@ -38,7 +38,7 @@ public class FieldTest {
     @Test
     public void shouldReturnStartPositions() {
         assertEquals(640, field.getBallStartX(), 0.001);
-        assertEquals(622, field.getBallStartY(), 0.001);
+        assertEquals(360, field.getBallStartY(), 0.001);
         assertEquals(320, field.getLeftPlayerStartX(), 0.001);
         assertEquals(960, field.getRightPlayerStartX(), 0.001);
         assertEquals(580, field.getPlayerStartY(), 0.001);

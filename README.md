@@ -1,31 +1,33 @@
 # DOPOSoccer
 
-Simulacion de futbol de cabezas para el proyecto final de DOPO 2026-2.
-El proyecto esta dividido en un motor de dominio independiente de la interfaz y
-una aplicacion de escritorio hecha con Swing y Java2D.
+Futbol de cabezas 2D para el proyecto final de DOPO 2026-2 (Desarrollo Orientado
+por Objetos), basado en Head Soccer. Esta dividido en un motor de dominio
+(`src/domain`) independiente de la interfaz y una aplicacion de escritorio hecha
+con Swing y Java2D (`src/presentation`).
+
+Estado: **Version uno** (Presentacion + Dominio, nivel basico Jugador vs Jugador).
 
 ## Requisitos
 
-- JDK 21 o superior (el proyecto se compila con `--release 21`).
-- No requiere librerias externas para jugar.
-- JUnit 5 se usa solo para las pruebas (`lib/junit-platform-console-standalone-1.14.4.jar`).
+- JDK 21 o superior.
+- JUnit 5 solo para las pruebas (`lib/junit-platform-console-standalone-1.14.4.jar`).
 
 ## Como ejecutar
 
 Desde la raiz del repositorio:
 
 ```powershell
-javac --release 21 -encoding UTF-8 -d out (Get-ChildItem src -Recurse -Filter *.java | ForEach-Object { $_.FullName })
-java -cp out presentation.HeadSoccerApp
+javac -encoding UTF-8 -d out (Get-ChildItem src -Recurse -Filter *.java | ForEach-Object { $_.FullName })
+java -cp out presentation.DOPOSoccerApp
 ```
 
-En VS Code o Eclipse tambien se puede ejecutar la clase
-`presentation.HeadSoccerApp`.
+En VS Code o Eclipse se ejecuta la clase `presentation.DOPOSoccerApp`.
 
 ## Como jugar
 
 1. En el menu principal elige `JUGAR`.
-2. Selecciona modalidad, forma de terminar, el valor de la regla y un pais para cada lado.
+2. Elige tipo de partido (por tiempo: 1 a 10 minutos; por goles: 1 a 10 goles),
+   la resolucion de la cancha y el personaje de cada jugador.
 3. Presiona `COMENZAR`.
 
 ### Controles
@@ -35,63 +37,47 @@ En VS Code o Eclipse tambien se puede ejecutar la clase
 | Mover | `A` / `D` | Flechas izquierda / derecha |
 | Saltar | `W` | Flecha arriba |
 | Patear | `S` | Flecha abajo |
-| Poder | `Q` | `Ctrl` |
+| Poder | `Q` | `Ctrl derecho` |
 | Pausa | `ESC` o `P` | `ESC` o `P` |
+| Terminar el partido | `T` | `T` |
 | Volver al menu | `M` | `M` |
 | Revancha al terminar | `R` o `Enter` | `R` o `Enter` |
 
-En `Humano vs Maquina` el jugador 1 controla el lado izquierdo y la maquina el
-derecho. En `Maquina vs Maquina` no se usan las teclas de jugador.
+## Reglas implementadas
 
-## Modalidades
+- **Por tiempo:** gana quien tenga mas goles; si empatan, muerte subita.
+- **Por goles:** gana el primero que llegue a la meta.
+- **Vida:** 100 x (1 + 0.10 x (Survival - 1)). Una patada que alcanza al rival le
+  quita 10 x multiplicadorKick. Con vida 0 el jugador queda aturdido 3 segundos.
+- **Poder:** la barra se llena en 10 s y sube 1/4 al recibir un gol. Con la barra
+  llena se activa un aura; al tocar el balon sale el tiro de poder. Si golpea al
+  rival hace daño x multiplicadorKick y deja su efecto.
+- **Puntos:** 100 al ganador y 25 al perdedor.
 
-- **1 vs 1:** dos jugadores humanos.
-- **Humano vs Maquina:** el jugador controla la izquierda.
-- **Maquina vs Maquina:** la IA controla ambos lados.
-
-## Formas de terminar
-
-- **Por tiempo:** 60 segundos por defecto. Si hay empate se juega gol de oro.
-- **Por goles:** gana el primero que llegue al objetivo (3 por defecto).
-- **Supervivencia:** cada lado empieza con 5 balones. Cada gol le quita un balon
-  al lado que lo recibe. El jugador avanza de ronda mientras gane; la serie
-  termina cuando pierde.
-
-## Poderes
-
-La barra de poder se llena en 10 segundos. Al presionar la tecla de poder queda
-armado y se activa con el siguiente golpe al balon.
-
-| Pais | Poder | Efecto |
-|---|---|---|
-| Canada | Congelacion | Congela al rival 3 segundos |
-| Colombia | Reduccion | Encoge al rival 5 segundos |
-| Brasil | Confusion | Invierte los controles del rival 5 segundos |
-| Corea del Sur | Empuje | Dispara el balon y aturde al rival que lo toque |
-| Estados Unidos | Ilusion | Dispara el balon con 7 copias falsas; el balon real atraviesa al rival |
+| Pais | Tiro | Daño | Efecto |
+|---|---|---|---|
+| Corea del Sur | Aura Azul | 40 | Empuje 1.5 s |
+| Camerun | Rayo | 60 | Electrocutado 3 s |
+| Nigeria | Tornado | 40 | Inconsciente 3 s |
+| Estados Unidos | Ilusion | 30 | Confusion 2.5 s |
 
 ## Pruebas
 
 ```powershell
-javac --release 21 -encoding UTF-8 -d out (Get-ChildItem src -Recurse -Filter *.java | ForEach-Object { $_.FullName })
-javac --release 21 -encoding UTF-8 -cp "out;lib/junit-platform-console-standalone-1.14.4.jar" -d out (Get-ChildItem test -Recurse -Filter *.java | ForEach-Object { $_.FullName })
-java -jar lib/junit-platform-console-standalone-1.14.4.jar --class-path out --scan-class-path --disable-banner --details=summary
+javac -encoding UTF-8 -cp lib/junit-platform-console-standalone-1.14.4.jar -d out (Get-ChildItem src, test -Recurse -Filter *.java | ForEach-Object { $_.FullName })
+java -jar lib/junit-platform-console-standalone-1.14.4.jar execute --class-path out --scan-class-path --details=summary
 ```
 
-Resultado actual: **139 pruebas, 139 exitosas**.
-
-## Documentacion
-
-El detalle de la arquitectura, las reglas, las constantes de fisica, las fases y
-las pruebas esta en [INFORME_FASES.md](INFORME_FASES.md).
+Resultado actual: **148 pruebas, 148 exitosas**.
 
 ## Estructura
 
 ```
-src/domain/        Motor del juego, fisica, reglas, poderes, IA y supervivencia
-src/presentation/  Interfaz Swing/Java2D, menus, HUD y controles
+src/domain/        Motor: fisica, reglas, jugadores, tiros de poder, efectos, excepciones
+src/presentation/  Interfaz Swing/Java2D: menu, configuracion, juego y HUD
 test/domain/       Pruebas del dominio
-test/presentation/ Pruebas headless de la sesion de juego
-lib/               Runner de JUnit 5
-resources/         Reservado para recursos futuros
+test/presentation/ Pruebas del teclado sin abrir ventana
+lib/               JUnit 5
 ```
+
+Los errores para programadores se registran en `dopo_errors.log`.

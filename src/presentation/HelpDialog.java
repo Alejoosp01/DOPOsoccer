@@ -71,14 +71,15 @@ public final class HelpDialog extends JDialog {
                 + "<p><b style='color:" + BLUE + "'>JUGADOR 2</b> &nbsp; Flechas mover &nbsp; Arriba saltar"
                 + " &nbsp; Abajo patear &nbsp; Ctrl derecho poder</p>"
                 + "<p><b style='color:" + GOLD + "'>PARTIDA</b> &nbsp; ESC o P pausa &nbsp; "
-                + "M menu &nbsp; R revancha al terminar</p>"
+                + "T terminar &nbsp; M menu &nbsp; R revancha al terminar</p>"
                 + "<p style='color:" + GOLD + "'><b>PODERES</b></p>"
-                + "<p style='color:" + MUTED + "'>La barra se llena en 10 segundos. Con la barra llena, "
-                + "la tecla de poder lo deja armado y se activa con el siguiente golpe al balon.</p>"
-                + "<p>Empuje (Corea del Sur) &nbsp; Ilusion (Estados Unidos) &nbsp; "
-                + "Congelacion (Canada) &nbsp; Reduccion (Colombia) &nbsp; Confusion (Brasil)</p>"
-                + "<p style='color:" + MUTED + "'>Un jugador aturdido no se mueve, no salta ni patea "
-                + "durante 3 segundos.</p>"
+                + "<p style='color:" + MUTED + "'>La barra se llena en 10 segundos (y sube 1/4 al recibir "
+                + "un gol). Con la barra llena, la tecla de poder activa un aura. Al tocar el balon con "
+                + "el aura sale el tiro de poder: si golpea al rival le hace dano y le deja un efecto.</p>"
+                + "<p>Aura Azul (Corea del Sur) &nbsp; Rayo (Camerun) &nbsp; Tornado (Nigeria) &nbsp; "
+                + "Ilusion (Estados Unidos)</p>"
+                + "<p style='color:" + MUTED + "'>Cada patada que alcanza al rival le quita vida. "
+                + "Si la vida llega a 0 queda aturdido 3 segundos y luego se recupera.</p>"
                 + "</body></html>";
     }
 }

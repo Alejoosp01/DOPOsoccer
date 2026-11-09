@@ -7,13 +7,7 @@ import org.junit.jupiter.api.Test;
 public class MatchRunnerTest {
 
     private Match createMatch(GameMode mode) throws DOPOSoccerException {
-        GameCharacter leftCharacter = new GameCharacter(
-                "Left", new Country("Left", new FreezePower()), 3, 3, 3);
-        GameCharacter rightCharacter = new GameCharacter(
-                "Right", new Country("Right", new FreezePower()), 3, 3, 3);
-        Player left = new Player(leftCharacter, true, 0, 0);
-        Player right = new Player(rightCharacter, false, 0, 0);
-        return new Match(MatchConfig.time(mode), left, right);
+        return TestData.match(TestData.byTime(mode, 1));
     }
 
     @Test
@@ -27,13 +21,6 @@ public class MatchRunnerTest {
     public void shouldCreateHumanAndMachineForPvm() throws DOPOSoccerException {
         MatchRunner runner = MatchRunner.forMatch(createMatch(GameMode.PVM));
         assertTrue(runner.getLeftController() instanceof HumanController);
-        assertTrue(runner.getRightController() instanceof MachineController);
-    }
-
-    @Test
-    public void shouldCreateMachineControllersForMvm() throws DOPOSoccerException {
-        MatchRunner runner = MatchRunner.forMatch(createMatch(GameMode.MVM));
-        assertTrue(runner.getLeftController() instanceof MachineController);
         assertTrue(runner.getRightController() instanceof MachineController);
     }
 
@@ -52,8 +39,8 @@ public class MatchRunnerTest {
 
     @Test
     public void shouldProduceSameResultWithTwoMachineRuns() throws DOPOSoccerException {
-        Match first = createMatch(GameMode.MVM);
-        Match second = createMatch(GameMode.MVM);
+        Match first = createMatch(GameMode.PVM);
+        Match second = createMatch(GameMode.PVM);
         MatchRunner firstRunner = MatchRunner.forMatch(first);
         MatchRunner secondRunner = MatchRunner.forMatch(second);
         firstRunner.start();

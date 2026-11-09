@@ -4,6 +4,7 @@
 
 # ---------- Archivo de estudio personal (NUNCA se sube) ----------
 EXPLICACION_CODIGO.txt
+PLAN_VERSION1_DOPOSoccer.txt
 
 # ---------- Compilados de Java ----------
 *.class
@@ -21,6 +22,7 @@ build/
 hs_err_pid*
 replay_pid*
 *.log
+dopo_errors.log
 
 # ---------- Eclipse ----------
 .metadata/

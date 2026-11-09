@@ -6,9 +6,9 @@ import javax.swing.UIManager;
 /**
  * Punto de entrada de la aplicacion de escritorio.
  */
-public final class HeadSoccerApp {
+public final class DOPOSoccerApp {
 
-    private HeadSoccerApp() {
+    private DOPOSoccerApp() {
     }
 
     /**

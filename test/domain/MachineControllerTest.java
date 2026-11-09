@@ -14,13 +14,9 @@ public class MachineControllerTest {
 
     @BeforeEach
     public void setUp() throws DOPOSoccerException {
-        GameCharacter leftCharacter = new GameCharacter(
-                "Left", new Country("Left", new FreezePower()), 3, 3, 3);
-        GameCharacter rightCharacter = new GameCharacter(
-                "Right", new Country("Right", new FreezePower()), 3, 3, 3);
-        left = new Player(leftCharacter, true, 0, 0);
-        right = new Player(rightCharacter, false, 0, 0);
-        match = new Match(MatchConfig.time(GameMode.MVM), left, right);
+        left = TestData.player(true);
+        right = TestData.player(false);
+        match = new Match(TestData.byTime(GameMode.PVM, 1), left, right);
         machine = new MachineController();
         match.start();
     }
@@ -66,24 +62,24 @@ public class MachineControllerTest {
     }
 
     @Test
-    public void shouldArmPowerWhenReady() {
+    public void shouldActivateAuraWhenBarIsFull() {
         fillPower(left);
 
         machine.update(match, Side.LEFT, 0.1);
 
-        assertTrue(left.isPowerArmed());
+        assertTrue(left.hasAura());
     }
 
     @Test
-    public void shouldKickAndActivateArmedPower() {
+    public void shouldFirePowerShotWhenTouchingBallWithAura() {
         fillPower(left);
         match.getBall().setPosition(400, match.getField().getPlayerStartY());
         left.setPosition(360, match.getField().getPlayerStartY());
 
         machine.update(match, Side.LEFT, 0.1);
 
-        assertTrue(right.isFrozen());
-        assertFalse(left.isPowerArmed());
+        assertTrue(match.getBall().hasActiveShot());
+        assertFalse(left.hasAura());
         assertTrue(match.getBall().getVelocityX() > 0);
     }
 
@@ -184,8 +180,6 @@ public class MachineControllerTest {
     }
 
     private void fillPower(Player player) {
-        for (int i = 0; i < 100; i++) {
-            player.update(0.1, match.getField());
-        }
+        TestData.fillPowerBar(player);
     }
 }

@@ -25,7 +25,7 @@ public class BallTest {
 
     @Test
     public void shouldRestOnGround() {
-        ball.setPosition(640, field.getBallStartY());
+        ball.setPosition(640, field.getGroundY() - Field.BALL_RADIUS);
         ball.update(0.01, field);
         assertEquals(field.getGroundY() - Field.BALL_RADIUS, ball.getY(), 0.001);
         assertEquals(0, ball.getVelocityY(), 0.001);
@@ -70,8 +70,8 @@ public class BallTest {
     public void shouldResetToCenterWithoutEffects() {
         ball.setPosition(10, 10);
         ball.setVelocity(100, 100);
-        ball.chargePush();
-        ball.startIllusion(7, 1.5);
+        ball.launchShot(new LightningShot(), TestData.player(true));
+        ball.startDecoys(7, 1.5);
 
         ball.reset(field);
 
@@ -79,8 +79,38 @@ public class BallTest {
         assertEquals(field.getBallStartY(), ball.getY(), 0.001);
         assertEquals(0, ball.getVelocityX(), 0.001);
         assertEquals(0, ball.getVelocityY(), 0.001);
-        assertFalse(ball.isPushCharged());
-        assertFalse(ball.isIllusionActive());
+        assertFalse(ball.hasActiveShot());
+        assertEquals(0, ball.getDecoyCount());
+    }
+
+@Test
+    public void shouldFlyStraightWithStraightPowerShot() {
+        ball.launchShot(new LightningShot(), TestData.player(true));
+        ball.setVelocity(900, 0);
+        ball.update(0.1, field);
+        assertEquals(300, ball.getY(), 0.001);
+        assertEquals(0, ball.getVelocityY(), 0.001);
+    }
+
+    @Test
+    public void shouldFallWithTornadoShot() {
+        ball.launchShot(new TornadoShot(), TestData.player(true));
+        ball.update(0.1, field);
+        assertTrue(ball.getVelocityY() > 0);
+    }
+
+    @Test
+    public void shouldTurnOffShotAfterMaxTime() {
+        ball.launchShot(new LightningShot(), TestData.player(true));
+        ball.update(Ball.SHOT_MAX_SECONDS, field);
+        assertFalse(ball.hasActiveShot());
+    }
+
+    @Test
+    public void shouldRemoveDecoysWhenTimeEnds() {
+        ball.startDecoys(7, 1);
+        assertEquals(7, ball.getDecoyCount());
+        ball.update(1, field);
         assertEquals(0, ball.getDecoyCount());
     }
 

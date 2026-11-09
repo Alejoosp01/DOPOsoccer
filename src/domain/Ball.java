@@ -2,7 +2,7 @@ package domain;
 
 /**
  * Balon del partido.
- * Guarda posicion, velocidad y los efectos de los poderes (Empuje e Ilusion).
+ * Guarda posicion y velocidad, y el tiro de poder que lleva (si lo lleva).
  * La gravedad y los rebotes se calculan en update(dt, field).
  */
 public class Ball {
@@ -11,18 +11,19 @@ public class Ball {
     public static final double GROUND_FRICTION = 0.98;
     public static final double MIN_SPEED = 5;
     public static final double MIN_BOUNCE_SPEED = 60;
+    public static final double SHOT_MAX_SECONDS = 2;
 
     private double x;
     private double y;
     private double velocityX;
     private double velocityY;
-    private double radius;
+    private final double radius;
 
-    private boolean pushCharged;
+    private PowerShot activeShot;
+    private Player shotOwner;
+    private double shotTime;
     private int decoyCount;
-    private double illusionTime;
-    private Power activePower;
-    private Player powerOwner;
+    private double decoyTime;
 
     public Ball(double x, double y, double radius) {
         this.x = x;
@@ -30,15 +31,15 @@ public class Ball {
         this.radius = radius;
         this.velocityX = 0;
         this.velocityY = 0;
-        this.pushCharged = false;
+        this.activeShot = null;
+        this.shotOwner = null;
+        this.shotTime = 0;
         this.decoyCount = 0;
-        this.illusionTime = 0;
-        this.activePower = null;
-        this.powerOwner = null;
+        this.decoyTime = 0;
     }
 
     /**
-     * Pone la velocidad del balon en los ejes x y y
+     * Pone la velocidad del balon en los ejes x y y.
      */
     public void setVelocity(double velocityX, double velocityY) {
         this.velocityX = velocityX;
@@ -54,14 +55,16 @@ public class Ball {
     }
 
     /**
-     * Avanza la fisica del balon un instante.
-     * Aplica gravedad, rebotes contra suelo, techo, paredes y arcos.
+     * Avanza la fisica del balon un instante: gravedad (salvo en tiros rectos),
+     * movimiento y rebotes contra suelo, techo, paredes y arcos.
      */
     public void update(double dt, Field field) {
         if (dt <= 0 || field == null) {
             return;
         }
-        velocityY += Field.GRAVITY * dt;
+        if (activeShot == null || activeShot.isAffectedByGravity()) {
+            velocityY += Field.GRAVITY * dt;
+        }
         x += velocityX * dt;
         y += velocityY * dt;
 
@@ -70,11 +73,30 @@ public class Ball {
         bounceOnLeftSide(field);
         bounceOnRightSide(field);
 
-        updateEffects(dt);
+        updateTimers(dt);
     }
 
     /**
-     * Devuelve el balon al centro de la cancha, quieto y sin efectos.
+     * Descuenta el tiempo del tiro activo y de los balones falsos.
+     * Un tiro que no golpeo a nadie se apaga a los SHOT_MAX_SECONDS.
+     */
+    private void updateTimers(double dt) {
+        if (activeShot != null) {
+            shotTime = shotTime + dt;
+            if (shotTime >= SHOT_MAX_SECONDS) {
+                clearShot();
+            }
+        }
+        if (decoyTime > 0) {
+            decoyTime = Math.max(0, decoyTime - dt);
+            if (decoyTime == 0) {
+                decoyCount = 0;
+            }
+        }
+    }
+
+    /**
+     * Devuelve el balon al centro de la cancha, quieto y sin tiro, para que caiga.
      */
     public void reset(Field field) {
         if (field == null) {
@@ -84,11 +106,9 @@ public class Ball {
         y = field.getBallStartY();
         velocityX = 0;
         velocityY = 0;
-        pushCharged = false;
+        clearShot();
         decoyCount = 0;
-        illusionTime = 0;
-        activePower = null;
-        powerOwner = null;
+        decoyTime = 0;
     }
 
     /**
@@ -110,6 +130,9 @@ public class Ball {
         }
     }
 
+    /**
+     * Rebota el balon contra el suelo y le aplica friccion.
+     */
     private void bounceOnGround(Field field) {
         if (y + radius <= field.getGroundY()) {
             return;
@@ -126,6 +149,9 @@ public class Ball {
         }
     }
 
+    /**
+     * Rebota contra la pared sobre el arco izquierdo o el poste, si no entra por la boca.
+     */
     private void bounceOnLeftSide(Field field) {
         double line = field.getLeftGoalLineX();
         double goalTop = field.getLeftGoal().getY();
@@ -151,6 +177,9 @@ public class Ball {
         }
     }
 
+    /**
+     * Rebota contra el fondo y el techo del arco izquierdo.
+     */
     private void bounceInsideLeftGoal(Field field) {
         if (x - radius < 0) {
             x = radius;
@@ -167,6 +196,9 @@ public class Ball {
         }
     }
 
+    /**
+     * Rebota contra la pared sobre el arco derecho o el poste, si no entra por la boca.
+     */
     private void bounceOnRightSide(Field field) {
         double line = field.getRightGoalLineX();
         double goalTop = field.getRightGoal().getY();
@@ -192,6 +224,9 @@ public class Ball {
         }
     }
 
+    /**
+     * Rebota contra el fondo y el techo del arco derecho.
+     */
     private void bounceInsideRightGoal(Field field) {
         if (x + radius > field.getWidth()) {
             x = field.getWidth() - radius;
@@ -209,86 +244,54 @@ public class Ball {
     }
 
     /**
-     * Carga el balon con el Empuje: el primer rival que lo toque sale empujado.
+     * Marca que el balon lleva un tiro de poder lanzado por owner.
      */
-    public void chargePush() {
-        pushCharged = true;
+    public void launchShot(PowerShot shot, Player owner) {
+        activeShot = shot;
+        shotOwner = owner;
+        shotTime = 0;
     }
 
     /**
-     * Descarga el balon del Empuje.
+     * Quita el tiro de poder del balon.
      */
-    public void releasePush() {
-        pushCharged = false;
+    public void clearShot() {
+        activeShot = null;
+        shotOwner = null;
+        shotTime = 0;
     }
 
     /**
-     * Inicia la Ilusion: aparecen copias falsas durante unos segundos.
+     * Devuelve si el balon lleva un tiro de poder.
      */
-    public void startIllusion(int decoys, double seconds) {
-        decoyCount = decoys;
-        illusionTime = seconds;
+    public boolean hasActiveShot() {
+        return activeShot != null;
     }
 
     /**
-     * Guarda el poder que dejo el balon cargado y quien lo activo.
+     * Devuelve el tiro de poder que lleva el balon, o null.
      */
-    public void setActivePower(Power power, Player owner) {
-        activePower = power;
-        powerOwner = owner;
+    public PowerShot getActiveShot() {
+        return activeShot;
     }
 
     /**
-     * Limpia el poder cargado en el balon.
+     * Devuelve quien lanzo el tiro de poder, o null.
      */
-    public void clearActivePower() {
-        activePower = null;
-        powerOwner = null;
+    public Player getShotOwner() {
+        return shotOwner;
     }
 
     /**
-     * Devuelve el poder que dejo el balon cargado, o null.
+     * Crea balones falsos que duran los segundos indicados (tiro Ilusion).
      */
-    public Power getActivePower() {
-        return activePower;
+    public void startDecoys(int count, double seconds) {
+        decoyCount = count;
+        decoyTime = seconds;
     }
 
     /**
-     * Devuelve el jugador que activo el poder cargado, o null.
-     */
-    public Player getPowerOwner() {
-        return powerOwner;
-    }
-
-    /**
-     * Descuenta el tiempo de los efectos. dt esta en segundos.
-     */
-    public void updateEffects(double dt) {
-        if (illusionTime > 0) {
-            illusionTime = illusionTime - dt;
-            if (illusionTime <= 0) {
-                illusionTime = 0;
-                decoyCount = 0;
-            }
-        }
-    }
-
-    /**
-     * Devuelve si el balon tiene cargado el Empuje.
-     */
-    public boolean isPushCharged() {
-        return pushCharged;
-    }
-
-    /**
-     * Devuelve si la Ilusion esta activa.
-     */
-    public boolean isIllusionActive() {
-        return illusionTime > 0;
-    }
-
-    /**
-     * Devuelve la cantidad de copias falsas de la Ilusion.
+     * Devuelve cuantos balones falsos hay ahora.
      */
     public int getDecoyCount() {
         return decoyCount;

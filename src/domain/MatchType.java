@@ -1,16 +1,13 @@
 package domain;
 
 /**
- * Forma de decidir el final de un partido.
+ * Tipo de partido: forma de decidir el ganador.
  */
 public enum MatchType {
 
-    /** Gana quien tenga mas goles cuando se acaba el tiempo. */
+    /** Gana quien tenga mas goles al acabarse los minutos; si empatan, muerte subita. */
     TIME,
 
-    /** Gana quien llegue primero a la cantidad de goles objetivo. */
-    GOALS,
-
-    /** Cada gol le quita un balon al rival; pierde quien se quede sin balones. */
-    SURVIVAL
+    /** Gana el primero que llegue al numero de goles definido. */
+    GOALS
 }

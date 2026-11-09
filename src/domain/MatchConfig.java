@@ -1,96 +1,89 @@
 package domain;
 
 /**
- * Configuracion de un partido: modalidad, forma de terminar, duracion,
- * goles objetivo y balones de supervivencia.
+ * Configuracion de un partido: modalidad, tipo de partido y su valor
+ * (minutos si es por tiempo, goles si es por goles).
  */
 public class MatchConfig {
 
-    public static final double DEFAULT_DURATION = 60;
+    public static final int MIN_MINUTES = 1;
+    public static final int MAX_MINUTES = 10;
+    public static final int MIN_GOALS = 1;
+    public static final int MAX_GOALS = 10;
 
     private final GameMode gameMode;
     private final MatchType matchType;
-    private final double duration;
+    private final int minutes;
     private final int goalsTarget;
-    private final int ballsPerSide;
 
-    private MatchConfig(GameMode gameMode, MatchType matchType, double duration,
-                        int goalsTarget, int ballsPerSide) {
+    private MatchConfig(GameMode gameMode, MatchType matchType, int minutes, int goalsTarget) {
         if (gameMode == null) {
             throw new IllegalArgumentException("La modalidad no puede ser null");
         }
         this.gameMode = gameMode;
         this.matchType = matchType;
-        this.duration = duration;
+        this.minutes = minutes;
         this.goalsTarget = goalsTarget;
-        this.ballsPerSide = ballsPerSide;
     }
 
     /**
-     * Partido por tiempo con la duracion por defecto (60 segundos).
+     * Partido por tiempo: dura los minutos indicados (1 a 10).
      */
-    public static MatchConfig time(GameMode gameMode) {
-        return new MatchConfig(gameMode, MatchType.TIME, DEFAULT_DURATION, 0, 0);
-    }
-
-    /**
-     * Partido por tiempo con una duracion en segundos.
-     */
-    public static MatchConfig time(GameMode gameMode, double duration) throws DOPOSoccerException {
-        if (duration <= 0) {
-            throw new DOPOSoccerException(DOPOSoccerException.INVALID_DURATION);
+    public static MatchConfig byTime(GameMode gameMode, int minutes) throws DOPOSoccerException {
+        if (minutes < MIN_MINUTES || minutes > MAX_MINUTES) {
+            throw new DOPOSoccerException(DOPOSoccerException.INVALID_MINUTES);
         }
-        return new MatchConfig(gameMode, MatchType.TIME, duration, 0, 0);
+        return new MatchConfig(gameMode, MatchType.TIME, minutes, 0);
     }
 
     /**
-     * Partido a goles: gana quien llegue primero al objetivo.
+     * Partido por goles: gana el primero que llegue a los goles indicados (1 a 10).
      */
-    public static MatchConfig goals(GameMode gameMode, int target) throws DOPOSoccerException {
-        if (!isValidGoalTarget(target)) {
-            throw new DOPOSoccerException(DOPOSoccerException.INVALID_GOAL_TARGET);
+    public static MatchConfig byGoals(GameMode gameMode, int goals) throws DOPOSoccerException {
+        if (goals < MIN_GOALS || goals > MAX_GOALS) {
+            throw new DOPOSoccerException(DOPOSoccerException.INVALID_GOALS);
         }
-        return new MatchConfig(gameMode, MatchType.GOALS, 0, target, 0);
+        return new MatchConfig(gameMode, MatchType.GOALS, 0, goals);
     }
 
     /**
-     * Devuelve si la meta de goles es una de las que permite el enunciado: 3, 5 o 7.
+     * Devuelve la modalidad.
      */
-    public static boolean isValidGoalTarget(int target) {
-        return target == 3 || target == 5 || target == 7;
-    }
-
-    /**
-     * Partido de supervivencia: cada lado empieza con la cantidad de balones
-     * indicada y pierde uno cada vez que recibe un gol.
-     */
-    public static MatchConfig survival(int balls) throws DOPOSoccerException {
-        if (balls < 1) {
-            throw new DOPOSoccerException(DOPOSoccerException.INVALID_BALLS);
-        }
-        return new MatchConfig(GameMode.PVM, MatchType.SURVIVAL, 0, 0, balls);
-    }
-
     public GameMode getGameMode() {
         return gameMode;
     }
 
+    /**
+     * Devuelve el tipo de partido.
+     */
     public MatchType getMatchType() {
         return matchType;
     }
 
-    public double getDuration() {
-        return duration;
+    /**
+     * Devuelve los minutos del partido (0 si es por goles).
+     */
+    public int getMinutes() {
+        return minutes;
     }
 
+    /**
+     * Devuelve los goles para ganar (0 si es por tiempo).
+     */
     public int getGoalsTarget() {
         return goalsTarget;
     }
 
-    public int getBallsPerSide() {
-        return ballsPerSide;
+    /**
+     * Devuelve la duracion en segundos (0 si es por goles).
+     */
+    public double getDurationSeconds() {
+        return minutes * 60.0;
     }
 
+    /**
+     * Devuelve si el partido es por tiempo.
+     */
     public boolean isTimed() {
         return matchType == MatchType.TIME;
     }

@@ -11,13 +11,12 @@ import javax.swing.JLabel;
 import javax.swing.JSpinner;
 import javax.swing.JTextField;
 
-import domain.ConfusionPower;
-import domain.FreezePower;
+import domain.BlueAuraShot;
 import domain.GameCharacter;
-import domain.IllusionPower;
-import domain.Power;
-import domain.PushPower;
-import domain.ShrinkPower;
+import domain.IllusionShot;
+import domain.LightningShot;
+import domain.PowerShot;
+import domain.TornadoShot;
 
 /**
  * Colores, fuentes y utilidades de dibujo compartidas por la interfaz.
@@ -58,21 +57,18 @@ public final class UiTheme {
      * Devuelve el color principal de la camiseta de un pais.
      */
     public static Color countryPrimary(GameCharacter character) {
-        String name = character.getCountry().getName();
+        String name = character.getName();
         if ("Corea del Sur".equals(name)) {
             return new Color(205, 48, 62);
         }
+        if ("Camerun".equals(name)) {
+            return new Color(0, 122, 61);
+        }
+        if ("Nigeria".equals(name)) {
+            return new Color(0, 135, 81);
+        }
         if ("Estados Unidos".equals(name)) {
             return new Color(58, 64, 122);
-        }
-        if ("Canada".equals(name)) {
-            return new Color(214, 45, 34);
-        }
-        if ("Colombia".equals(name)) {
-            return new Color(250, 205, 25);
-        }
-        if ("Brasil".equals(name)) {
-            return new Color(255, 220, 0);
         }
         return new Color(120, 140, 170);
     }
@@ -81,43 +77,37 @@ public final class UiTheme {
      * Devuelve el color secundario (franjas) de un pais.
      */
     public static Color countrySecondary(GameCharacter character) {
-        String name = character.getCountry().getName();
+        String name = character.getName();
         if ("Corea del Sur".equals(name)) {
             return new Color(0, 55, 125);
         }
-        if ("Estados Unidos".equals(name)) {
-            return new Color(178, 34, 52);
+        if ("Camerun".equals(name)) {
+            return new Color(252, 209, 22);
         }
-        if ("Canada".equals(name)) {
+        if ("Nigeria".equals(name)) {
             return new Color(246, 248, 252);
         }
-        if ("Colombia".equals(name)) {
-            return new Color(0, 56, 147);
-        }
-        if ("Brasil".equals(name)) {
-            return new Color(0, 156, 59);
+        if ("Estados Unidos".equals(name)) {
+            return new Color(178, 34, 52);
         }
         return new Color(60, 76, 100);
     }
 
     /**
-     * Devuelve una frase corta que explica que hace un poder.
+     * Devuelve una frase corta que explica el efecto de un tiro de poder.
      */
-    public static String powerDescription(Power power) {
-        if (power instanceof PushPower) {
-            return "Tiro recto muy rapido: empuja y aturde al rival que lo toque";
+    public static String powerDescription(PowerShot shot) {
+        if (shot instanceof BlueAuraShot) {
+            return "Recto y muy rapido. Empuje: lanza al rival hacia su arco";
         }
-        if (power instanceof IllusionPower) {
-            return "El balon se divide en 8; el real atraviesa al rival";
+        if (shot instanceof LightningShot) {
+            return "Recto y electrico. Electrocutado: no salta y va a mitad de velocidad";
         }
-        if (power instanceof FreezePower) {
-            return "Congela al rival en un bloque de hielo";
+        if (shot instanceof TornadoShot) {
+            return "Remolino a ras de suelo. Inconsciente: no se mueve, no salta ni patea";
         }
-        if (power instanceof ShrinkPower) {
-            return "Encoge al rival a un tamano diminuto";
-        }
-        if (power instanceof ConfusionPower) {
-            return "Invierte los controles de movimiento del rival";
+        if (shot instanceof IllusionShot) {
+            return "8 balones iguales, 7 falsos. Confusion: no se sabe cual es el real";
         }
         return "";
     }

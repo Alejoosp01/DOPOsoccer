@@ -2,115 +2,101 @@ package domain;
 
 /**
  * Fachada del juego: es la unica clase del dominio que necesita la interfaz.
- * Une la configuracion de una partida con el motor y oculta si se juega un
- * partido unico o una serie de supervivencia, de modo que la interfaz
- * siempre use los mismos metodos.
+ * Crea el partido con la configuracion, los personajes y los perfiles de los
+ * dos jugadores, lo avanza, lo pausa, lo termina y reparte los puntos.
  */
 public class DOPOSoccer {
 
+    public static final int WINNER_POINTS = 100;
+    public static final int LOSER_POINTS = 25;
+
     private final MatchConfig config;
     private final Field field;
-    private final GameCharacter leftCharacter;
-    private final GameCharacter rightCharacter;
+    private final PlayerProfile leftProfile;
+    private final PlayerProfile rightProfile;
     private final Player leftPlayer;
     private final Player rightPlayer;
     private final MatchRunner runner;
-    private final SurvivalSeries series;
 
     private boolean started;
     private boolean paused;
+    private boolean pointsAwarded;
+    private int leftPointsEarned;
+    private int rightPointsEarned;
 
-    public DOPOSoccer(MatchConfig config, GameCharacter leftCharacter, GameCharacter rightCharacter) {
-        this(config, new Field(), leftCharacter, rightCharacter);
-    }
-
-    public DOPOSoccer(MatchConfig config, Field field,
-                      GameCharacter leftCharacter, GameCharacter rightCharacter) {
+    public DOPOSoccer(MatchConfig config, GameCharacter leftCharacter, GameCharacter rightCharacter,
+                      PlayerProfile leftProfile, PlayerProfile rightProfile) {
         if (config == null) {
             throw new IllegalArgumentException("La configuracion no puede ser null");
-        }
-        if (field == null) {
-            throw new IllegalArgumentException("La cancha no puede ser null");
         }
         if (leftCharacter == null || rightCharacter == null) {
             throw new IllegalArgumentException("Los personajes no pueden ser null");
         }
-        this.config = config;
-        this.field = field;
-        this.leftCharacter = leftCharacter;
-        this.rightCharacter = rightCharacter;
-        this.leftPlayer = new Player(leftCharacter, true, 0, 0);
-        this.rightPlayer = new Player(rightCharacter, false, 0, 0);
-        if (config.getMatchType() == MatchType.SURVIVAL) {
-            this.series = new SurvivalSeries(config, field, leftPlayer, rightPlayer);
-            this.runner = null;
-        } else {
-            Match match = new Match(config, field, leftPlayer, rightPlayer);
-            this.runner = MatchRunner.forMatch(match);
-            this.series = null;
+        if (leftProfile == null || rightProfile == null) {
+            throw new IllegalArgumentException("Los perfiles no pueden ser null");
         }
+        this.config = config;
+        this.field = new Field();
+        this.leftProfile = leftProfile;
+        this.rightProfile = rightProfile;
+        this.leftPlayer = new Player(leftProfile, leftCharacter, true);
+        this.rightPlayer = new Player(rightProfile, rightCharacter, false);
+        Match match = new Match(config, field, leftPlayer, rightPlayer);
+        this.runner = MatchRunner.forMatch(match);
         this.started = false;
         this.paused = false;
+        this.pointsAwarded = false;
+        this.leftPointsEarned = 0;
+        this.rightPointsEarned = 0;
     }
 
     /**
-     * Inicia la partida o la primera ronda de la serie.
+     * Inicia el partido.
      */
     public void start() {
-        if (series != null) {
-            series.start();
-        } else {
-            runner.start();
-        }
+        runner.start();
         started = true;
         paused = false;
     }
 
     /**
-     * Avanza el motor de juego un instante. dt esta en segundos.
+     * Avanza el juego un instante. dt esta en segundos.
+     * Cuando el partido termina, reparte los puntos (una sola vez).
      */
     public void update(double dt) {
         if (!started || paused || dt <= 0) {
             return;
         }
-        if (series != null) {
-            series.update(dt);
-        } else {
-            runner.update(dt);
+        runner.update(dt);
+        if (isFinished()) {
+            awardPoints();
         }
     }
 
     /**
-     * Pausa la partida actual. Devuelve false si no se puede pausar.
+     * Pausa el partido. Devuelve false si no se puede pausar.
      */
     public boolean pause() {
         if (!started || paused || isFinished()) {
             return false;
         }
-        Match match = getMatch();
-        if (match == null) {
-            return false;
-        }
-        MatchState state = match.getState();
+        MatchState state = getMatch().getState();
         if (state != MatchState.PLAYING && state != MatchState.GOAL) {
             return false;
         }
-        match.pause();
+        getMatch().pause();
         paused = true;
         return true;
     }
 
     /**
-     * Reanuda la partida pausada.
+     * Reanuda el partido pausado.
      */
     public boolean resume() {
         if (!paused) {
             return false;
         }
-        Match match = getMatch();
-        if (match != null) {
-            match.resume();
-        }
+        getMatch().resume();
         paused = false;
         return true;
     }
@@ -128,145 +114,87 @@ public class DOPOSoccer {
     }
 
     /**
-     * Devuelve el partido que se esta jugando ahora mismo.
+     * Termina el partido en cualquier momento y reparte los puntos.
+     */
+    public void endMatch() {
+        if (!started || isFinished()) {
+            return;
+        }
+        if (paused) {
+            resume();
+        }
+        getMatch().finishNow();
+        awardPoints();
+    }
+
+    /**
+     * Da 100 puntos al ganador y 25 al perdedor. Si no hay ganador (empate al
+     * terminar antes de tiempo) no se dan puntos.
+     */
+    private void awardPoints() {
+        if (pointsAwarded) {
+            return;
+        }
+        pointsAwarded = true;
+        Winner winner = getMatch().getWinner();
+        if (winner == Winner.LEFT) {
+            leftPointsEarned = WINNER_POINTS;
+            rightPointsEarned = LOSER_POINTS;
+        } else if (winner == Winner.RIGHT) {
+            leftPointsEarned = LOSER_POINTS;
+            rightPointsEarned = WINNER_POINTS;
+        }
+        leftProfile.addPoints(leftPointsEarned);
+        rightProfile.addPoints(rightPointsEarned);
+    }
+
+    /**
+     * Devuelve los puntos que gano un lado en este partido.
+     */
+    public int getPointsEarned(Side side) {
+        if (side == Side.LEFT) {
+            return leftPointsEarned;
+        }
+        return rightPointsEarned;
+    }
+
+    /**
+     * Devuelve el partido.
      */
     public Match getMatch() {
-        if (series != null) {
-            return series.getCurrentMatch();
-        }
-        if (runner == null) {
-            return null;
-        }
         return runner.getMatch();
     }
 
     /**
-     * Devuelve el marcador del partido actual, o null si no hay partido.
-     */
-    public Score getScore() {
-        Match match = getMatch();
-        if (match == null) {
-            return null;
-        }
-        return match.getScore();
-    }
-
-    /**
-     * Devuelve el estado del partido actual.
-     */
-    public MatchState getState() {
-        Match match = getMatch();
-        if (match == null) {
-            return MatchState.READY;
-        }
-        return match.getState();
-    }
-
-    /**
-     * Devuelve el tiempo restante del partido actual.
-     */
-    public double getTimeLeft() {
-        Match match = getMatch();
-        if (match == null) {
-            return 0;
-        }
-        return match.getTimeLeft();
-    }
-
-    /**
-     * Devuelve los balones que le quedan a un lado en supervivencia.
-     */
-    public int getRemainingBalls(Side side) {
-        Match match = getMatch();
-        if (match == null) {
-            return 0;
-        }
-        return match.getRemainingBalls(side);
-    }
-
-    /**
-     * Devuelve si la partida ya termino.
+     * Devuelve si el partido ya termino.
      */
     public boolean isFinished() {
-        if (!started) {
-            return false;
-        }
-        if (series != null) {
-            return series.isFinished();
-        }
-        return getMatch() != null && getMatch().isFinished();
+        return started && getMatch().isFinished();
     }
 
     /**
-     * Devuelve el ganador de la partida o de la serie completa.
+     * Devuelve el ganador del partido, o NONE.
      */
     public Winner getWinner() {
-        if (series != null) {
-            return series.getSeriesWinner();
-        }
-        Match match = getMatch();
-        if (match == null) {
-            return Winner.NONE;
-        }
-        return match.getWinner();
+        return getMatch().getWinner();
     }
 
     /**
-     * Devuelve si la partida es una serie de supervivencia.
-     */
-    public boolean isSurvival() {
-        return series != null;
-    }
-
-    /**
-     * Devuelve las rondas ganadas en supervivencia (0 si no es supervivencia).
-     */
-    public int getRoundsWon() {
-        if (series == null) {
-            return 0;
-        }
-        return series.getRoundsWon();
-    }
-
-    /**
-     * Devuelve las rondas jugadas en supervivencia (0 si no es supervivencia).
-     */
-    public int getRoundsPlayed() {
-        if (series == null) {
-            return 0;
-        }
-        return series.getRoundsPlayed();
-    }
-
-    /**
-     * Devuelve los balones con que empieza cada lado en supervivencia.
-     */
-    public int getBallsPerSide() {
-        return config.getBallsPerSide();
-    }
-
-    /**
-     * Devuelve el controlador del lado izquierdo (humano o maquina).
+     * Devuelve el controlador del lado izquierdo.
      */
     public PlayerController getLeftController() {
-        if (series != null) {
-            return series.getLeftController();
-        }
         return runner.getLeftController();
     }
 
     /**
-     * Devuelve el controlador del lado derecho (humano o maquina).
+     * Devuelve el controlador del lado derecho.
      */
     public PlayerController getRightController() {
-        if (series != null) {
-            return series.getRightController();
-        }
         return runner.getRightController();
     }
 
     /**
-     * Devuelve la configuracion de la partida.
+     * Devuelve la configuracion.
      */
     public MatchConfig getConfig() {
         return config;
@@ -280,42 +208,56 @@ public class DOPOSoccer {
     }
 
     /**
-     * Devuelve el personaje del lado izquierdo.
+     * Devuelve el perfil del jugador izquierdo.
      */
-    public GameCharacter getLeftCharacter() {
-        return leftCharacter;
+    public PlayerProfile getLeftProfile() {
+        return leftProfile;
     }
 
     /**
-     * Devuelve el personaje del lado derecho.
+     * Devuelve el perfil del jugador derecho.
      */
-    public GameCharacter getRightCharacter() {
-        return rightCharacter;
+    public PlayerProfile getRightProfile() {
+        return rightProfile;
     }
 
     /**
-     * Devuelve el jugador del lado izquierdo.
+     * Devuelve el jugador izquierdo (en la cancha).
      */
     public Player getLeftPlayer() {
         return leftPlayer;
     }
 
     /**
-     * Devuelve el jugador del lado derecho.
+     * Devuelve el jugador derecho (en la cancha).
      */
     public Player getRightPlayer() {
         return rightPlayer;
     }
 
     /**
-     * Devuelve si la partida esta pausada.
+     * Devuelve el personaje del lado izquierdo.
+     */
+    public GameCharacter getLeftCharacter() {
+        return leftPlayer.getCharacter();
+    }
+
+    /**
+     * Devuelve el personaje del lado derecho.
+     */
+    public GameCharacter getRightCharacter() {
+        return rightPlayer.getCharacter();
+    }
+
+    /**
+     * Devuelve si esta pausado.
      */
     public boolean isPaused() {
         return paused;
     }
 
     /**
-     * Devuelve si la partida ya empezo.
+     * Devuelve si ya empezo.
      */
     public boolean isStarted() {
         return started;
