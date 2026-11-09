@@ -12,7 +12,7 @@ public class PlayerTest {
     private Ball ball;
 
     @BeforeEach
-    public void setUp() throws POOBSoccerException {
+    public void setUp() throws DOPOSoccerException {
         field = new Field();
         GameCharacter character = new GameCharacter(
                 "Test", new Country("Test", new FreezePower()), 3, 3, 3);
@@ -190,7 +190,7 @@ public class PlayerTest {
     }
 
     @Test
-    public void shouldDetectBallTouchAndPlayerIntersection() throws POOBSoccerException {
+    public void shouldDetectBallTouchAndPlayerIntersection() throws DOPOSoccerException {
         ball.setPosition(player.getX() + 50, player.getY());
         assertTrue(player.touchesBall(ball));
 

@@ -1,4 +1,4 @@
-# POOBsoccer
+# DOPOSoccer
 
 Simulacion de futbol de cabezas para el proyecto final de DOPO 2026-2.
 El proyecto esta dividido en un motor de dominio independiente de la interfaz y
@@ -12,7 +12,7 @@ una aplicacion de escritorio hecha con Swing y Java2D.
 
 ## Como ejecutar
 
-Desde la carpeta `POOBsoccer`:
+Desde la raiz del repositorio:
 
 ```powershell
 javac --release 21 -encoding UTF-8 -d out (Get-ChildItem src -Recurse -Filter *.java | ForEach-Object { $_.FullName })

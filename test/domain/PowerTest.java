@@ -12,7 +12,7 @@ public class PowerTest {
     private Player right;
 
     @BeforeEach
-    public void setUp() throws POOBSoccerException {
+    public void setUp() throws DOPOSoccerException {
         GameCharacter character = new GameCharacter("Canada", new Country("Canada", new FreezePower()), 3, 3, 3);
         ball = new Ball(400, 300, 10);
         left = new Player(character, true, 200, 400);

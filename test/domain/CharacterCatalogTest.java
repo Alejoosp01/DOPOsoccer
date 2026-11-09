@@ -9,13 +9,13 @@ import org.junit.jupiter.api.Test;
 public class CharacterCatalogTest {
 
     @Test
-    public void shouldHaveFiveCharacters() throws POOBSoccerException {
+    public void shouldHaveFiveCharacters() throws DOPOSoccerException {
         ArrayList<GameCharacter> characters = CharacterCatalog.createCharacters();
         assertEquals(5, characters.size());
     }
 
     @Test
-    public void shouldGiveEachCountryItsPower() throws POOBSoccerException {
+    public void shouldGiveEachCountryItsPower() throws DOPOSoccerException {
         ArrayList<GameCharacter> characters = CharacterCatalog.createCharacters();
         assertTrue(characters.get(0).getPower() instanceof PushPower);
         assertTrue(characters.get(1).getPower() instanceof IllusionPower);

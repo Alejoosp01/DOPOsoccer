@@ -2,8 +2,6 @@ package domain;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.awt.geom.Rectangle2D;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -89,7 +87,7 @@ public class BallTest {
     @Test
     public void shouldReturnBoundsAroundCenter() {
         ball.setPosition(640, 300);
-        Rectangle2D.Double bounds = ball.getBounds();
+        Hitbox bounds = ball.getBounds();
         assertEquals(640 - Field.BALL_RADIUS, bounds.getX(), 0.001);
         assertEquals(300 - Field.BALL_RADIUS, bounds.getY(), 0.001);
         assertEquals(Field.BALL_RADIUS * 2, bounds.getWidth(), 0.001);

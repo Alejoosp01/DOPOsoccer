@@ -12,7 +12,7 @@ public class SurvivalSeriesTest {
     private Player right;
 
     @BeforeEach
-    public void setUp() throws POOBSoccerException {
+    public void setUp() throws DOPOSoccerException {
         field = new Field();
         GameCharacter leftCharacter = new GameCharacter(
                 "Left", new Country("Left", new FreezePower()), 3, 3, 3);
@@ -22,7 +22,7 @@ public class SurvivalSeriesTest {
         right = new Player(rightCharacter, false, 0, 0);
     }
 
-    private SurvivalSeries createSeries(int balls) {
+    private SurvivalSeries createSeries(int balls) throws DOPOSoccerException {
         return new SurvivalSeries(MatchConfig.survival(balls), field, left, right,
                 new HumanController(), new HumanController());
     }
@@ -42,7 +42,7 @@ public class SurvivalSeriesTest {
     }
 
     @Test
-    public void shouldStartWithoutCurrentMatch() {
+    public void shouldStartWithoutCurrentMatch() throws DOPOSoccerException {
         SurvivalSeries series = createSeries(2);
         assertNull(series.getCurrentMatch());
         assertFalse(series.isFinished());
@@ -50,7 +50,7 @@ public class SurvivalSeriesTest {
     }
 
     @Test
-    public void shouldStartFirstRoundWithConfiguredBalls() {
+    public void shouldStartFirstRoundWithConfiguredBalls() throws DOPOSoccerException {
         SurvivalSeries series = createSeries(2);
         series.start();
 
@@ -64,7 +64,7 @@ public class SurvivalSeriesTest {
     }
 
     @Test
-    public void shouldUseHumanAndMachineByDefault() {
+    public void shouldUseHumanAndMachineByDefault() throws DOPOSoccerException {
         SurvivalSeries series = new SurvivalSeries(MatchConfig.survival(1), field, left, right);
         series.start();
 
@@ -73,14 +73,14 @@ public class SurvivalSeriesTest {
     }
 
     @Test
-    public void shouldRejectNonSurvivalConfig() {
+    public void shouldRejectNonSurvivalConfig() throws DOPOSoccerException {
         assertThrows(IllegalArgumentException.class,
                 () -> new SurvivalSeries(MatchConfig.time(GameMode.PVP), field, left, right,
                         new HumanController(), new HumanController()));
     }
 
     @Test
-    public void shouldNotCountRoundWhileMatchIsPlaying() {
+    public void shouldNotCountRoundWhileMatchIsPlaying() throws DOPOSoccerException {
         SurvivalSeries series = createSeries(2);
         series.start();
 
@@ -92,7 +92,7 @@ public class SurvivalSeriesTest {
     }
 
     @Test
-    public void shouldKeepRoundAliveWhileBallsRemain() {
+    public void shouldKeepRoundAliveWhileBallsRemain() throws DOPOSoccerException {
         SurvivalSeries series = createSeries(2);
         series.start();
 
@@ -110,7 +110,7 @@ public class SurvivalSeriesTest {
     }
 
     @Test
-    public void shouldAdvanceWhenPlayerWinsRound() {
+    public void shouldAdvanceWhenPlayerWinsRound() throws DOPOSoccerException {
         SurvivalSeries series = createSeries(1);
         series.start();
         Match first = series.getCurrentMatch();
@@ -133,7 +133,7 @@ public class SurvivalSeriesTest {
     }
 
     @Test
-    public void shouldCountMultipleRoundsWon() {
+    public void shouldCountMultipleRoundsWon() throws DOPOSoccerException {
         SurvivalSeries series = createSeries(1);
         series.start();
 
@@ -149,7 +149,7 @@ public class SurvivalSeriesTest {
     }
 
     @Test
-    public void shouldRaiseMachineLevelEachRoundWon() {
+    public void shouldRaiseMachineLevelEachRoundWon() throws DOPOSoccerException {
         SurvivalSeries series = new SurvivalSeries(MatchConfig.survival(1), field, left, right);
         series.start();
         assertEquals(1, series.getMachineLevel());
@@ -166,7 +166,7 @@ public class SurvivalSeriesTest {
     }
 
     @Test
-    public void shouldRestartMachineLevelWhenSeriesRestarts() {
+    public void shouldRestartMachineLevelWhenSeriesRestarts() throws DOPOSoccerException {
         SurvivalSeries series = new SurvivalSeries(MatchConfig.survival(1), field, left, right);
         series.start();
         scoreInRightGoal(series);
@@ -178,7 +178,7 @@ public class SurvivalSeriesTest {
     }
 
     @Test
-    public void shouldEndSeriesWhenPlayerLoses() {
+    public void shouldEndSeriesWhenPlayerLoses() throws DOPOSoccerException {
         SurvivalSeries series = createSeries(1);
         series.start();
 
@@ -193,7 +193,7 @@ public class SurvivalSeriesTest {
     }
 
     @Test
-    public void shouldIgnoreUpdatesAfterSeriesFinished() {
+    public void shouldIgnoreUpdatesAfterSeriesFinished() throws DOPOSoccerException {
         SurvivalSeries series = createSeries(1);
         series.start();
         scoreInLeftGoal(series);
@@ -208,7 +208,7 @@ public class SurvivalSeriesTest {
     }
 
     @Test
-    public void shouldResetPowerBetweenRounds() {
+    public void shouldResetPowerBetweenRounds() throws DOPOSoccerException {
         SurvivalSeries series = createSeries(1);
         series.start();
         for (int i = 0; i < 100; i++) {

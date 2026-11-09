@@ -1,7 +1,5 @@
 package domain;
 
-import java.awt.geom.Rectangle2D;
-
 /**
  * Personaje dentro de la cancha.
  * Maneja posicion, movimiento, salto, patada, efectos y barra de poder.
@@ -14,7 +12,6 @@ public class Player {
     public static final double HEIGHT = 120;
     public static final double SHRUNK_SCALE = 0.5;
 
-    public static final double GRAVITY = 1800;
 
     public static final double MOVE_SPEED_BASE = 200;
     public static final double MOVE_SPEED_PER_STAT = 50;
@@ -98,7 +95,7 @@ public class Player {
         updateEffects(dt);
         addPowerCharge(dt);
 
-        velocityY += GRAVITY * dt;
+        velocityY += Field.GRAVITY * dt;
         y += velocityY * dt;
 
         double halfHeight = getHeight() / 2;
@@ -122,7 +119,12 @@ public class Player {
         if (field == null || dt <= 0 || direction == 0 || !canAct()) {
             return false;
         }
-        double sign = direction > 0 ? 1 : -1;
+        double sign;
+        if (direction > 0) {
+            sign = 1;
+        } else {
+            sign = -1;
+        }
         if (isConfused()) {
             sign = -sign;
         }
@@ -176,7 +178,7 @@ public class Player {
         if (other == null) {
             return false;
         }
-        Rectangle2D.Double body = getBounds();
+        Hitbox body = getBounds();
         double footTop = body.getY() + body.getHeight() / 2;
         double footBottom = body.getMaxY();
         double footStart;
@@ -188,7 +190,7 @@ public class Player {
             footEnd = body.getX();
             footStart = footEnd - KICK_REACH;
         }
-        Rectangle2D.Double rival = other.getBounds();
+        Hitbox rival = other.getBounds();
         return rival.getX() <= footEnd
                 && rival.getMaxX() >= footStart
                 && rival.getY() <= footBottom
@@ -216,7 +218,7 @@ public class Player {
         if (ball == null) {
             return false;
         }
-        Rectangle2D.Double bounds = getBounds();
+        Hitbox bounds = getBounds();
         double radius = ball.getRadius();
         return ball.getX() + radius >= bounds.getX()
                 && ball.getX() - radius <= bounds.getMaxX()
@@ -482,10 +484,10 @@ public class Player {
     /**
      * Devuelve el rectangulo que ocupa el jugador.
      */
-    public Rectangle2D.Double getBounds() {
+    public Hitbox getBounds() {
         double width = getWidth();
         double height = getHeight();
-        return new Rectangle2D.Double(x - width / 2, y - height / 2, width, height);
+        return new Hitbox(x - width / 2, y - height / 2, width, height);
     }
 
     /**

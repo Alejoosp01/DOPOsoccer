@@ -30,15 +30,15 @@ public class MatchConfig {
      * Partido por tiempo con la duracion por defecto (60 segundos).
      */
     public static MatchConfig time(GameMode gameMode) {
-        return time(gameMode, DEFAULT_DURATION);
+        return new MatchConfig(gameMode, MatchType.TIME, DEFAULT_DURATION, 0, 0);
     }
 
     /**
      * Partido por tiempo con una duracion en segundos.
      */
-    public static MatchConfig time(GameMode gameMode, double duration) {
+    public static MatchConfig time(GameMode gameMode, double duration) throws DOPOSoccerException {
         if (duration <= 0) {
-            throw new IllegalArgumentException("La duracion debe ser positiva");
+            throw new DOPOSoccerException(DOPOSoccerException.INVALID_DURATION);
         }
         return new MatchConfig(gameMode, MatchType.TIME, duration, 0, 0);
     }
@@ -46,9 +46,9 @@ public class MatchConfig {
     /**
      * Partido a goles: gana quien llegue primero al objetivo.
      */
-    public static MatchConfig goals(GameMode gameMode, int target) {
+    public static MatchConfig goals(GameMode gameMode, int target) throws DOPOSoccerException {
         if (!isValidGoalTarget(target)) {
-            throw new IllegalArgumentException("El objetivo de goles debe ser 3, 5 o 7");
+            throw new DOPOSoccerException(DOPOSoccerException.INVALID_GOAL_TARGET);
         }
         return new MatchConfig(gameMode, MatchType.GOALS, 0, target, 0);
     }
@@ -64,9 +64,9 @@ public class MatchConfig {
      * Partido de supervivencia: cada lado empieza con la cantidad de balones
      * indicada y pierde uno cada vez que recibe un gol.
      */
-    public static MatchConfig survival(int balls) {
+    public static MatchConfig survival(int balls) throws DOPOSoccerException {
         if (balls < 1) {
-            throw new IllegalArgumentException("La cantidad de balones debe ser positiva");
+            throw new DOPOSoccerException(DOPOSoccerException.INVALID_BALLS);
         }
         return new MatchConfig(GameMode.PVM, MatchType.SURVIVAL, 0, 0, balls);
     }

@@ -1,11 +1,11 @@
-# POOB Soccer - Informe de implementación por fases
+# DOPOSoccer - Informe de implementación por fases
 
 **Proyecto:** simulación de futbol de cabezas (Head Soccer)
 **Materia:** DOPO 2026-2
 **Repositorio de trabajo:** `POOBsoccer/`
 **Tecnologías:** Java 21, Swing, Java2D, JUnit 5
 **Estado:** fases 1 a 7 completadas
-**Última verificación:** 139 pruebas ejecutadas, 139 exitosas
+**Última verificación:** 166 pruebas ejecutadas, 166 exitosas
 
 ---
 
@@ -27,7 +27,7 @@ distintos y una serie de rondas de supervivencia en la que el jugador avanza
 mientras gane.
 
 La lógica de dominio se puede probar sin abrir ventanas. La interfaz se apoya en
-una fachada llamada `GameSession` que oculta si la partida es un partido único o
+una fachada del dominio llamada `DOPOSoccer` que oculta si la partida es un partido único o
 una serie de supervivencia.
 
 ---
@@ -77,6 +77,7 @@ POOBsoccer/
 │   │   ├── GameCharacter.java
 │   │   ├── GameMode.java
 │   │   ├── Goal.java
+│   │   ├── Hitbox.java
 │   │   ├── HumanController.java
 │   │   ├── IllusionPower.java
 │   │   ├── MachineController.java
@@ -87,7 +88,8 @@ POOBsoccer/
 │   │   ├── MatchType.java
 │   │   ├── Player.java
 │   │   ├── PlayerController.java
-│   │   ├── POOBSoccerException.java
+│   │   ├── DOPOSoccer.java
+│   │   ├── DOPOSoccerException.java
 │   │   ├── Power.java
 │   │   ├── PushPower.java
 │   │   ├── Score.java
@@ -96,18 +98,20 @@ POOBsoccer/
 │   │   ├── SurvivalSeries.java
 │   │   └── Winner.java
 │   └── presentation/
+│       ├── CharacterCard.java
+│       ├── ChoiceChip.java
 │       ├── GameFrame.java
 │       ├── GamePanel.java
-│       ├── GameSession.java
 │       ├── GameSetup.java
 │       ├── HeadSoccerApp.java
+│       ├── HelpDialog.java
 │       ├── MainMenuPanel.java
 │       ├── MenuButton.java
 │       ├── SetupPanel.java
 │       └── UiTheme.java
 ├── test/
 │   ├── domain/         (pruebas del motor)
-│   └── presentation/   (pruebas headless de GameSession)
+│   └── presentation/   (pruebas del teclado sin abrir ventana)
 ├── lib/
 │   └── junit-platform-console-standalone-1.14.4.jar
 ├── resources/          (reservado para recursos futuros)
@@ -115,7 +119,7 @@ POOBsoccer/
 └── INFORME_FASES.md
 ```
 
-El proyecto Eclipse ubicado en `POOBsoccer/DopoSoccer/` no fue modificado. El
+La carpeta vieja `DopoSoccer/` (una copia anterior del proyecto) se eliminó. El
 archivo UML `HeadSoccer.astah` también quedó intacto y es responsabilidad del
 autor del proyecto.
 
@@ -125,11 +129,11 @@ autor del proyecto.
 
 ### 4.1 Separación dominio / presentación
 
-El dominio no importa clases de Swing. Solo usa `java.awt.geom.Rectangle2D` para
-representar rectángulos de colisión, lo que mantiene el motor independiente de la
+El dominio no importa clases de Swing ni de AWT. Los rectángulos de colisión son
+una clase propia, `Hitbox`, lo que mantiene el motor independiente de la
 interfaz gráfica y facilita las pruebas.
 
-La presentación depende del dominio a través de `GameSession` y de las clases
+La presentación depende del dominio a través de la fachada `DOPOSoccer` y de las clases
 públicas del motor (`Match`, `Player`, `Ball`, `MatchConfig`, etc.).
 
 ```
@@ -140,7 +144,7 @@ públicas del motor (`Match`, `Player`, `Ball`, `MatchConfig`, etc.).
 │                        ▼                                     │
 │                    GamePanel                                 │
 │                        │                                     │
-│                   GameSession  ──────────────┐               │
+│                   DOPOSoccer  ──────────────┐               │
 └────────────────────────┼──────────────────────┼──────────────┘
                          ▼                      ▼
               ┌────────────────────┐   ┌────────────────────┐
@@ -157,8 +161,8 @@ públicas del motor (`Match`, `Player`, `Ball`, `MatchConfig`, etc.).
 ### 4.2 Flujo de una partida normal
 
 1. `SetupPanel` construye un `MatchConfig` y un `GameSetup`.
-2. `GameFrame` crea un `GameSession`.
-3. `GameSession` crea un `Match` y un `MatchRunner` con los controladores que
+2. `GameFrame` crea un `DOPOSoccer`.
+3. `DOPOSoccer` crea un `Match` y un `MatchRunner` con los controladores que
    corresponden a la modalidad.
 4. `GamePanel` inicia la sesión y ejecuta un bucle de simulación con paso fijo.
 5. En cada paso, `MatchRunner` actualiza primero los controladores y después la
@@ -168,7 +172,7 @@ públicas del motor (`Match`, `Player`, `Ball`, `MatchConfig`, etc.).
 
 ### 4.3 Flujo de una serie de supervivencia
 
-1. `GameSession` detecta `MatchType.SURVIVAL` y crea una `SurvivalSeries`.
+1. `DOPOSoccer` detecta `MatchType.SURVIVAL` y crea una `SurvivalSeries`.
 2. La serie crea una `Match` nueva por ronda.
 3. Si el jugador izquierdo gana la ronda, la serie crea la siguiente ronda.
 4. Si el jugador izquierdo pierde, la serie termina y conserva el conteo.
@@ -278,7 +282,7 @@ cuando la velocidad vertical es pequeña.
 | Brasil | 3 | 4 | 3 | Confusión |
 
 Las estadísticas van de 1 a 5 y se validan en el constructor de `GameCharacter`.
-Un valor fuera de rango lanza `POOBSoccerException.INVALID_STAT`.
+Un valor fuera de rango lanza `DOPOSoccerException.INVALID_STAT`.
 
 ---
 
@@ -578,7 +582,7 @@ update(dt)
 | `MainMenuPanel` | Título, botones Jugar / Cómo jugar / Salir y fondo animado. |
 | `SetupPanel` | Selección de modalidad, tipo de partido, valor y personajes. |
 | `GamePanel` | Bucle de juego, controles, renderizado, HUD, pausa y resultado. |
-| `GameSession` | Fachada headless entre la interfaz y el dominio. |
+| `DOPOSoccer` | Fachada headless entre la interfaz y el dominio. |
 | `GameSetup` | Datos elegidos en la configuración. |
 | `UiTheme` | Colores, fuentes, gradientes y utilidades de dibujo. |
 | `MenuButton` | Botón redondeado con efecto hover. |
@@ -651,7 +655,7 @@ teclas para evitar que un jugador quede moviéndose solo.
 Todo se dibuja con Java2D, sin imágenes externas:
 
 - Fondo con gradiente, tribunas y puntos de público.
-- Arena con cuadrícula, círculos y emblema `POOB`.
+- Estadio con tribunas, vallas "DOPO SOCCER 2026-2" y pasto con franjas.
 - Suelo de césped con franjas.
 - Arcos con red, postes y líneas de meta.
 - Jugadores con cabeza grande, colores del país, ojos que siguen al balón y
@@ -684,16 +688,16 @@ Las pruebas se dividen en:
   `CharacterCatalog`).
 - **Integración de dominio:** validan partidos completos, poderes dentro del
   partido, controladores, modalidades y supervivencia.
-- **Headless de presentación:** validan `GameSession` sin abrir ventanas.
+- **Fachada y teclado:** `DOPOSoccerTest` valida la fachada y `GamePanelInputTest` el teclado, sin abrir ventanas.
 
 ### 12.2 Resultado de la suite
 
 ```
 Test run finished after 362 ms
-[ 20 containers found      ]
-[ 20 containers successful ]
-[ 139 tests found         ]
-[ 139 tests successful    ]
+[ 21 containers found      ]
+[ 21 containers successful ]
+[ 166 tests found         ]
+[ 166 tests successful    ]
 [   0 tests failed        ]
 ```
 
@@ -706,19 +710,21 @@ Test run finished after 362 ms
 | `CountryTest` | 3 | Validación de nombre y poder del país. |
 | `FieldTest` | 5 | Dimensiones, arcos, posiciones iniciales y validaciones. |
 | `GameCharacterTest` | 7 | Estadísticas, nombre, país y poder. |
-| `GameSessionTest` | 13 | Partido único, PvsP/PvsM/MvsM, pausa y supervivencia. |
-| `GamePanelInputTest` | 4 | Enlace de Ctrl, flechas con Ctrl y limpieza de entrada. |
+| `GamePanelInputTest` | 6 | Solo Ctrl derecho activa el poder, flechas con Ctrl y limpieza de entrada. |
 | `GoalTest` | 6 | Contención completa del balón y geometría del arco. |
+| `HitboxTest` | 3 | Bordes, centro y cruce de rectángulos de colisión. |
 | `HumanControllerTest` | 7 | Dirección, salto, patada, poder y pausa. |
-| `MachineControllerTest` | 8 | Persecución, ubicación, salto, patada y poder. |
+| `MachineControllerTest` | 15 | Persecución, defensa, bloqueo, tiempo de reacción, niveles, patada y poder. |
+| `MatchConfigTest` | 7 | 60 s por defecto, metas 3/5/7, supervivencia solo PvsM y valores inválidos. |
 | `MatchRunnerTest` | 5 | Creación de controladores y determinismo. |
-| `MatchTest` | 19 | Inicio, goles, tiempo, gol de oro, goles objetivo, pausa y autogol. |
-| `PlayerTest` | 18 | Movimiento, salto, patada, colisiones, efectos y barra. |
+| `MatchTest` | 23 | Inicio, goles, tiempo, gol de oro, goles objetivo, pausa y autogol y golpe directo de la patada. |
+| `PlayerTest` | 20 | Movimiento, salto, patada, alcance del pie, colisiones, efectos y barra. |
+| `DOPOSoccerTest` | 13 | Fachada: partido único, PvsP/PvsM/MvsM, pausa y supervivencia. |
 | `PowerMatchTest` | 9 | Los cinco poderes dentro de un partido real. |
 | `PowerTest` | 10 | Contratos, nombres, duraciones y hooks de poderes. |
 | `ScoreTest` | 4 | Goles, empate, líder y reinicio. |
-| `SurvivalSeriesTest` | 11 | Rondas, avance, derrota, reinicio y poder entre rondas. |
-| **Total** | **139** | |
+| `SurvivalSeriesTest` | 13 | Rondas, avance, derrota, reinicio, poder entre rondas y nivel de la máquina. |
+| **Total** | **166** | |
 
 ### 12.4 Casos importantes verificados
 
@@ -734,8 +740,8 @@ Test run finished after 362 ms
 - El Empuje solo reacciona cuando el rival toca el balón.
 - La Ilusión deja pasar el balón real a través del rival.
 - La máquina produce el mismo resultado en dos ejecuciones idénticas.
-- `GameSession` pausa y reanuda sin avanzar el tiempo.
-- `GameSession` oculta correctamente la diferencia entre partido y serie.
+- `DOPOSoccer` pausa y reanuda sin avanzar el tiempo.
+- `DOPOSoccer` oculta correctamente la diferencia entre partido y serie.
 
 ### 12.5 Comando de pruebas
 
@@ -796,7 +802,7 @@ java -cp out presentation.HeadSoccerApp
    permite intercambiar controladores humanos por máquinas.
 9. **`SurvivalSeries` separada de `Match`.** La serie es una regla de más alto
    nivel que reutiliza el motor de partido.
-10. **`GameSession` como fachada.** La interfaz no necesita saber si está
+10. **`DOPOSoccer` como fachada.** La interfaz no necesita saber si está
     jugando un partido único o una serie.
 11. **Paso fijo en la interfaz.** La simulación no depende de los FPS reales.
 12. **Todo el arte es procedural.** No hay dependencias de imágenes ni recursos
@@ -859,8 +865,8 @@ son:
 
 - `HeadSoccerApp` crea `GameFrame`.
 - `GameFrame` compone `MainMenuPanel`, `SetupPanel` y `GamePanel`.
-- `GamePanel` compone `GameSession`.
-- `GameSession` compone `MatchRunner` o `SurvivalSeries`.
+- `GamePanel` compone `DOPOSoccer`.
+- `DOPOSoccer` compone `MatchRunner` o `SurvivalSeries`.
 - `SetupPanel` produce `GameSetup`.
 - `UiTheme` y `MenuButton` son utilidades de la interfaz.
 
@@ -914,7 +920,7 @@ classDiagram
         -int roundsWon
         -int roundsPlayed
     }
-    class GameSession {
+    class DOPOSoccer {
         -MatchRunner runner
         -SurvivalSeries series
     }
@@ -936,8 +942,8 @@ classDiagram
     MatchRunner --> Match
     MatchRunner --> PlayerController
     SurvivalSeries --> MatchRunner
-    GameSession --> MatchRunner
-    GameSession --> SurvivalSeries
+    DOPOSoccer --> MatchRunner
+    DOPOSoccer --> SurvivalSeries
 ```
 
 > El diagrama Mermaid es una guía de apoyo. La fuente oficial sigue siendo el
@@ -971,7 +977,6 @@ classDiagram
 | Pantalla de resultado y revancha | Cumplido |
 | Pruebas unitarias y de integración | Cumplido |
 | Documentación técnica | Cumplido |
-| `DopoSoccer/` de Eclipse sin modificar | Cumplido |
 | `HeadSoccer.astah` sin modificar | Cumplido |
 
 ---
@@ -980,12 +985,12 @@ classDiagram
 
 El proyecto quedó implementado de principio a fin con una separación clara entre
 la lógica del juego y la interfaz. El motor de dominio cubre física, reglas,
-poderes, IA y supervivencia, y está respaldado por 139 pruebas automatizadas.
+poderes, IA y supervivencia, y está respaldado por 166 pruebas automatizadas.
 La interfaz Swing/Java2D ofrece menús, configuración, partidas completas, HUD,
 pausa y resultados, usando únicamente dibujo procedural.
 
 La estructura permite extender el juego con nuevos poderes, personajes,
 modalidades o efectos sin reescribir el motor. Las decisiones de diseño más
 importantes fueron el paso fijo de simulación, la separación entre `Match` y
-`MatchRunner`, la fachada `GameSession` y el uso de polimorfismo para los
+`MatchRunner`, la fachada `DOPOSoccer` y el uso de polimorfismo para los
 poderes.

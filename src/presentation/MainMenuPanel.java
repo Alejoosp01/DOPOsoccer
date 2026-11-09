@@ -40,7 +40,7 @@ public final class MainMenuPanel extends JPanel {
         titleBlock.setOpaque(false);
         titleBlock.setLayout(new BoxLayout(titleBlock, BoxLayout.Y_AXIS));
 
-        javax.swing.JLabel title = UiTheme.label("POOB SOCCER", UiTheme.titleFont(), UiTheme.TEXT);
+        javax.swing.JLabel title = UiTheme.label("DOPO SOCCER", UiTheme.titleFont(), UiTheme.TEXT);
         title.setAlignmentX(CENTER_ALIGNMENT);
         javax.swing.JLabel subtitle = UiTheme.label(
                 "Futbol de cabezas - Proyecto Final DOPO 2026-2",

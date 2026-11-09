@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 
 public class MatchRunnerTest {
 
-    private Match createMatch(GameMode mode) throws POOBSoccerException {
+    private Match createMatch(GameMode mode) throws DOPOSoccerException {
         GameCharacter leftCharacter = new GameCharacter(
                 "Left", new Country("Left", new FreezePower()), 3, 3, 3);
         GameCharacter rightCharacter = new GameCharacter(
@@ -17,28 +17,28 @@ public class MatchRunnerTest {
     }
 
     @Test
-    public void shouldCreateHumanControllersForPvp() throws POOBSoccerException {
+    public void shouldCreateHumanControllersForPvp() throws DOPOSoccerException {
         MatchRunner runner = MatchRunner.forMatch(createMatch(GameMode.PVP));
         assertTrue(runner.getLeftController() instanceof HumanController);
         assertTrue(runner.getRightController() instanceof HumanController);
     }
 
     @Test
-    public void shouldCreateHumanAndMachineForPvm() throws POOBSoccerException {
+    public void shouldCreateHumanAndMachineForPvm() throws DOPOSoccerException {
         MatchRunner runner = MatchRunner.forMatch(createMatch(GameMode.PVM));
         assertTrue(runner.getLeftController() instanceof HumanController);
         assertTrue(runner.getRightController() instanceof MachineController);
     }
 
     @Test
-    public void shouldCreateMachineControllersForMvm() throws POOBSoccerException {
+    public void shouldCreateMachineControllersForMvm() throws DOPOSoccerException {
         MatchRunner runner = MatchRunner.forMatch(createMatch(GameMode.MVM));
         assertTrue(runner.getLeftController() instanceof MachineController);
         assertTrue(runner.getRightController() instanceof MachineController);
     }
 
     @Test
-    public void shouldAdvanceMatchThroughRunner() throws POOBSoccerException {
+    public void shouldAdvanceMatchThroughRunner() throws DOPOSoccerException {
         Match match = createMatch(GameMode.PVP);
         MatchRunner runner = MatchRunner.forMatch(match);
         runner.start();
@@ -51,7 +51,7 @@ public class MatchRunnerTest {
     }
 
     @Test
-    public void shouldProduceSameResultWithTwoMachineRuns() throws POOBSoccerException {
+    public void shouldProduceSameResultWithTwoMachineRuns() throws DOPOSoccerException {
         Match first = createMatch(GameMode.MVM);
         Match second = createMatch(GameMode.MVM);
         MatchRunner firstRunner = MatchRunner.forMatch(first);

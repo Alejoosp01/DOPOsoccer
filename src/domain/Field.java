@@ -14,8 +14,7 @@ public class Field {
     public static final double DEFAULT_GOAL_WIDTH = 100;
     public static final double DEFAULT_GOAL_HEIGHT = 280;
     public static final double BALL_RADIUS = 18;
-    public static final double PLAYER_WIDTH = 70;
-    public static final double PLAYER_HEIGHT = 120;
+    public static final double GRAVITY = 1800;
 
     private final double width;
     private final double height;
@@ -112,7 +111,7 @@ public class Field {
     }
 
     public double getPlayerStartY() {
-        return groundY - PLAYER_HEIGHT / 2;
+        return groundY - Player.HEIGHT / 2;
     }
 
     public double getWidth() {

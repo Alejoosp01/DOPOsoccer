@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 
 public class PowerMatchTest {
 
-    private Match createMatch(Power leftPower, Power rightPower) throws POOBSoccerException {
+    private Match createMatch(Power leftPower, Power rightPower) throws DOPOSoccerException {
         GameCharacter leftCharacter = new GameCharacter(
                 "Left", new Country("Left", leftPower), 3, 3, 3);
         GameCharacter rightCharacter = new GameCharacter(
@@ -32,7 +32,7 @@ public class PowerMatchTest {
     }
 
     @Test
-    public void shouldActivateFreezeOnNextKick() throws POOBSoccerException {
+    public void shouldActivateFreezeOnNextKick() throws DOPOSoccerException {
         Match match = createMatch(new FreezePower(), new PushPower());
         match.start();
         readyPower(match, Side.LEFT);
@@ -46,7 +46,7 @@ public class PowerMatchTest {
     }
 
     @Test
-    public void shouldActivateShrinkOnBodyTouch() throws POOBSoccerException {
+    public void shouldActivateShrinkOnBodyTouch() throws DOPOSoccerException {
         Match match = createMatch(new ShrinkPower(), new PushPower());
         match.start();
         readyPower(match, Side.LEFT);
@@ -61,7 +61,7 @@ public class PowerMatchTest {
     }
 
     @Test
-    public void shouldConfuseOpponentAndInvertMovement() throws POOBSoccerException {
+    public void shouldConfuseOpponentAndInvertMovement() throws DOPOSoccerException {
         Match match = createMatch(new ConfusionPower(), new PushPower());
         match.start();
         readyPower(match, Side.LEFT);
@@ -75,7 +75,7 @@ public class PowerMatchTest {
     }
 
     @Test
-    public void shouldChargePushBallAndStunRivalOnTouch() throws POOBSoccerException {
+    public void shouldChargePushBallAndStunRivalOnTouch() throws DOPOSoccerException {
         Match match = createMatch(new PushPower(), new FreezePower());
         match.start();
         readyPower(match, Side.LEFT);
@@ -94,7 +94,7 @@ public class PowerMatchTest {
     }
 
     @Test
-    public void shouldLetIllusionBallPassThroughRival() throws POOBSoccerException {
+    public void shouldLetIllusionBallPassThroughRival() throws DOPOSoccerException {
         Match match = createMatch(new IllusionPower(), new FreezePower());
         match.start();
         readyPower(match, Side.LEFT);
@@ -118,7 +118,7 @@ public class PowerMatchTest {
     }
 
     @Test
-    public void shouldTouchBallAfterIllusionExpires() throws POOBSoccerException {
+    public void shouldTouchBallAfterIllusionExpires() throws DOPOSoccerException {
         Match match = createMatch(new IllusionPower(), new FreezePower());
         match.start();
         readyPower(match, Side.LEFT);
@@ -140,7 +140,7 @@ public class PowerMatchTest {
     }
 
     @Test
-    public void shouldNotActivatePowerUntilBallIsHit() throws POOBSoccerException {
+    public void shouldNotActivatePowerUntilBallIsHit() throws DOPOSoccerException {
         Match match = createMatch(new FreezePower(), new PushPower());
         match.start();
         readyPower(match, Side.LEFT);
@@ -152,7 +152,7 @@ public class PowerMatchTest {
     }
 
     @Test
-    public void shouldKeepPowerArmedWhenKickMisses() throws POOBSoccerException {
+    public void shouldKeepPowerArmedWhenKickMisses() throws DOPOSoccerException {
         Match match = createMatch(new FreezePower(), new PushPower());
         match.start();
         readyPower(match, Side.LEFT);

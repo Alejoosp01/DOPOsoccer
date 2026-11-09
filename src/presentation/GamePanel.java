@@ -38,10 +38,12 @@ import domain.Ball;
 import domain.Field;
 import domain.GameMode;
 import domain.Goal;
+import domain.Hitbox;
 import domain.HumanController;
 import domain.Match;
 import domain.MatchState;
 import domain.MatchType;
+import domain.DOPOSoccer;
 import domain.Player;
 import domain.PlayerController;
 import domain.Score;
@@ -61,7 +63,7 @@ public final class GamePanel extends JPanel implements ActionListener {
     private static final int STANDS_BOTTOM = 290;
     private static final int BOARDS_HEIGHT = 28;
 
-    private final transient GameSession session;
+    private final transient DOPOSoccer session;
     private final transient Runnable onMenu;
     private final transient Runnable onRematch;
     private final Timer timer;
@@ -79,7 +81,7 @@ public final class GamePanel extends JPanel implements ActionListener {
     private int lastRightGoals;
     private int lastRoundsWon;
 
-    public GamePanel(GameSession session, Runnable onMenu, Runnable onRematch) {
+    public GamePanel(DOPOSoccer session, Runnable onMenu, Runnable onRematch) {
         if (session == null) {
             throw new IllegalArgumentException("La sesion no puede ser null");
         }
@@ -123,70 +125,24 @@ public final class GamePanel extends JPanel implements ActionListener {
         }
     }
 
+    /**
+     * Conecta cada tecla con su accion. Cada accion es un metodo con nombre.
+     */
     private void installKeyBindings() {
-        bindPress(KeyEvent.VK_A, "leftLeft", () -> {
-            leftKeys.add(KeyEvent.VK_A);
-            updateLeftDirection();
-        });
-        bindRelease(KeyEvent.VK_A, "leftLeft", () -> {
-            leftKeys.remove(KeyEvent.VK_A);
-            updateLeftDirection();
-        });
-        bindPress(KeyEvent.VK_D, "leftRight", () -> {
-            leftKeys.add(KeyEvent.VK_D);
-            updateLeftDirection();
-        });
-        bindRelease(KeyEvent.VK_D, "leftRight", () -> {
-            leftKeys.remove(KeyEvent.VK_D);
-            updateLeftDirection();
-        });
-        bindPress(KeyEvent.VK_W, "leftJump", () -> {
-            HumanController controller = leftHuman();
-            if (controller != null) {
-                controller.requestJump();
-            }
-        });
-        bindPress(KeyEvent.VK_S, "leftKick", () -> {
-            HumanController controller = leftHuman();
-            if (controller != null) {
-                controller.requestKick();
-            }
-        });
-        bindPress(KeyEvent.VK_Q, "leftPower", () -> {
-            HumanController controller = leftHuman();
-            if (controller != null) {
-                controller.requestPower();
-            }
-        });
+        bindPress(KeyEvent.VK_A, "leftLeft", () -> pressLeftKey(KeyEvent.VK_A));
+        bindRelease(KeyEvent.VK_A, "leftLeft", () -> releaseLeftKey(KeyEvent.VK_A));
+        bindPress(KeyEvent.VK_D, "leftRight", () -> pressLeftKey(KeyEvent.VK_D));
+        bindRelease(KeyEvent.VK_D, "leftRight", () -> releaseLeftKey(KeyEvent.VK_D));
+        bindPress(KeyEvent.VK_W, "leftJump", () -> requestJump(leftHuman()));
+        bindPress(KeyEvent.VK_S, "leftKick", () -> requestKick(leftHuman()));
+        bindPress(KeyEvent.VK_Q, "leftPower", () -> requestPower(leftHuman()));
 
-        bindWithCtrl(KeyEvent.VK_LEFT, "rightLeft", false, () -> {
-            rightKeys.add(KeyEvent.VK_LEFT);
-            updateRightDirection();
-        });
-        bindWithCtrl(KeyEvent.VK_LEFT, "rightLeft", true, () -> {
-            rightKeys.remove(KeyEvent.VK_LEFT);
-            updateRightDirection();
-        });
-        bindWithCtrl(KeyEvent.VK_RIGHT, "rightRight", false, () -> {
-            rightKeys.add(KeyEvent.VK_RIGHT);
-            updateRightDirection();
-        });
-        bindWithCtrl(KeyEvent.VK_RIGHT, "rightRight", true, () -> {
-            rightKeys.remove(KeyEvent.VK_RIGHT);
-            updateRightDirection();
-        });
-        bindWithCtrl(KeyEvent.VK_UP, "rightJump", false, () -> {
-            HumanController controller = rightHuman();
-            if (controller != null) {
-                controller.requestJump();
-            }
-        });
-        bindWithCtrl(KeyEvent.VK_DOWN, "rightKick", false, () -> {
-            HumanController controller = rightHuman();
-            if (controller != null) {
-                controller.requestKick();
-            }
-        });
+        bindWithCtrl(KeyEvent.VK_LEFT, "rightLeft", false, () -> pressRightKey(KeyEvent.VK_LEFT));
+        bindWithCtrl(KeyEvent.VK_LEFT, "rightLeft", true, () -> releaseRightKey(KeyEvent.VK_LEFT));
+        bindWithCtrl(KeyEvent.VK_RIGHT, "rightRight", false, () -> pressRightKey(KeyEvent.VK_RIGHT));
+        bindWithCtrl(KeyEvent.VK_RIGHT, "rightRight", true, () -> releaseRightKey(KeyEvent.VK_RIGHT));
+        bindWithCtrl(KeyEvent.VK_UP, "rightJump", false, () -> requestJump(rightHuman()));
+        bindWithCtrl(KeyEvent.VK_DOWN, "rightKick", false, () -> requestKick(rightHuman()));
         // El poder del jugador 2 es SOLO Ctrl derecho. Un KeyStroke no sabe si el
         // Ctrl es el izquierdo o el derecho; el KeyEvent si (getKeyLocation).
         addKeyListener(new KeyAdapter() {
@@ -198,13 +154,77 @@ public final class GamePanel extends JPanel implements ActionListener {
 
         bindPress(KeyEvent.VK_ESCAPE, "pause", this::togglePause);
         bindPress(KeyEvent.VK_P, "pauseKey", this::togglePause);
-        bindPress(KeyEvent.VK_M, "menu", () -> {
-            if (onMenu != null) {
-                onMenu.run();
-            }
-        });
+        bindPress(KeyEvent.VK_M, "menu", this::goToMenu);
         bindPress(KeyEvent.VK_R, "rematch", this::rematch);
         bindPress(KeyEvent.VK_ENTER, "rematchEnter", this::rematch);
+    }
+
+    /**
+     * Marca una tecla de movimiento del jugador 1 como presionada.
+     */
+    private void pressLeftKey(int keyCode) {
+        leftKeys.add(keyCode);
+        updateLeftDirection();
+    }
+
+    /**
+     * Marca una tecla de movimiento del jugador 1 como suelta.
+     */
+    private void releaseLeftKey(int keyCode) {
+        leftKeys.remove(keyCode);
+        updateLeftDirection();
+    }
+
+    /**
+     * Marca una tecla de movimiento del jugador 2 como presionada.
+     */
+    private void pressRightKey(int keyCode) {
+        rightKeys.add(keyCode);
+        updateRightDirection();
+    }
+
+    /**
+     * Marca una tecla de movimiento del jugador 2 como suelta.
+     */
+    private void releaseRightKey(int keyCode) {
+        rightKeys.remove(keyCode);
+        updateRightDirection();
+    }
+
+    /**
+     * Pide un salto si el lado es humano (controller no es null).
+     */
+    private void requestJump(HumanController controller) {
+        if (controller != null) {
+            controller.requestJump();
+        }
+    }
+
+    /**
+     * Pide una patada si el lado es humano.
+     */
+    private void requestKick(HumanController controller) {
+        if (controller != null) {
+            controller.requestKick();
+        }
+    }
+
+    /**
+     * Pide armar el poder si el lado es humano.
+     */
+    private void requestPower(HumanController controller) {
+        if (controller != null) {
+            controller.requestPower();
+        }
+    }
+
+    /**
+     * Vuelve al menu principal.
+     */
+    private void goToMenu() {
+        if (onMenu != null) {
+            onMenu.run();
+        }
     }
 
     /**
@@ -217,10 +237,7 @@ public final class GamePanel extends JPanel implements ActionListener {
         if (event.getKeyLocation() != KeyEvent.KEY_LOCATION_RIGHT) {
             return;
         }
-        HumanController controller = rightHuman();
-        if (controller != null) {
-            controller.requestPower();
-        }
+        requestPower(rightHuman());
     }
 
     /**
@@ -490,7 +507,7 @@ public final class GamePanel extends JPanel implements ActionListener {
             g2.setColor(new Color(22, 34, 56));
             g2.fillRect(x + 4, STANDS_BOTTOM + 4, 312, BOARDS_HEIGHT - 8);
             g2.setColor(UiTheme.withAlpha(UiTheme.ACCENT, 170));
-            drawCentered(g2, "POOB SOCCER  2026-2", x + 160, STANDS_BOTTOM + 20);
+            drawCentered(g2, "DOPO SOCCER  2026-2", x + 160, STANDS_BOTTOM + 20);
         }
 
         int grassTop = STANDS_BOTTOM + BOARDS_HEIGHT;
@@ -571,7 +588,9 @@ public final class GamePanel extends JPanel implements ActionListener {
     }
 
     private void drawPlayer(Graphics2D g2, Player player, Ball ball, boolean left) {
-        Rectangle2D.Double bounds = player.getBounds();
+        Hitbox box = player.getBounds();
+        Rectangle2D.Double bounds = new Rectangle2D.Double(
+                box.getX(), box.getY(), box.getWidth(), box.getHeight());
         double cx = player.getX();
         double ground = session.getField().getGroundY();
         Color sideColor = left ? UiTheme.LEFT_COLOR : UiTheme.RIGHT_COLOR;

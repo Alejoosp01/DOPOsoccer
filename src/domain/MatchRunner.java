@@ -31,11 +31,14 @@ public class MatchRunner {
             throw new IllegalArgumentException("El partido no puede ser null");
         }
         GameMode mode = match.getConfig().getGameMode();
-        return switch (mode) {
-            case PVP -> new MatchRunner(match, new HumanController(), new HumanController());
-            case PVM -> new MatchRunner(match, new HumanController(), new MachineController());
-            case MVM -> new MatchRunner(match, new MachineController(), new MachineController());
-        };
+        switch (mode) {
+            case PVP:
+                return new MatchRunner(match, new HumanController(), new HumanController());
+            case PVM:
+                return new MatchRunner(match, new HumanController(), new MachineController());
+            default:
+                return new MatchRunner(match, new MachineController(), new MachineController());
+        }
     }
 
     /**

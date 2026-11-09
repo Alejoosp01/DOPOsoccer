@@ -1,25 +1,12 @@
-package presentation;
-
-import domain.Field;
-import domain.GameCharacter;
-import domain.Match;
-import domain.MatchConfig;
-import domain.MatchRunner;
-import domain.MatchState;
-import domain.Player;
-import domain.PlayerController;
-import domain.Score;
-import domain.Side;
-import domain.SurvivalSeries;
-import domain.MatchType;
-import domain.Winner;
+package domain;
 
 /**
- * Une la configuracion de una partida con el motor del dominio.
- * Oculta si la partida es un partido unico o una serie de supervivencia,
- * de modo que la interfaz siempre use la misma API.
+ * Fachada del juego: es la unica clase del dominio que necesita la interfaz.
+ * Une la configuracion de una partida con el motor y oculta si se juega un
+ * partido unico o una serie de supervivencia, de modo que la interfaz
+ * siempre use los mismos metodos.
  */
-public class GameSession {
+public class DOPOSoccer {
 
     private final MatchConfig config;
     private final Field field;
@@ -33,12 +20,12 @@ public class GameSession {
     private boolean started;
     private boolean paused;
 
-    public GameSession(MatchConfig config, GameCharacter leftCharacter, GameCharacter rightCharacter) {
+    public DOPOSoccer(MatchConfig config, GameCharacter leftCharacter, GameCharacter rightCharacter) {
         this(config, new Field(), leftCharacter, rightCharacter);
     }
 
-    public GameSession(MatchConfig config, Field field,
-                       GameCharacter leftCharacter, GameCharacter rightCharacter) {
+    public DOPOSoccer(MatchConfig config, Field field,
+                      GameCharacter leftCharacter, GameCharacter rightCharacter) {
         if (config == null) {
             throw new IllegalArgumentException("La configuracion no puede ser null");
         }
@@ -80,7 +67,7 @@ public class GameSession {
     }
 
     /**
-     * Avanza el motor de juego un instante.
+     * Avanza el motor de juego un instante. dt esta en segundos.
      */
     public void update(double dt) {
         if (!started || paused || dt <= 0) {
@@ -154,11 +141,14 @@ public class GameSession {
     }
 
     /**
-     * Devuelve el marcador del partido actual.
+     * Devuelve el marcador del partido actual, o null si no hay partido.
      */
     public Score getScore() {
         Match match = getMatch();
-        return match == null ? null : match.getScore();
+        if (match == null) {
+            return null;
+        }
+        return match.getScore();
     }
 
     /**
@@ -177,7 +167,10 @@ public class GameSession {
      */
     public double getTimeLeft() {
         Match match = getMatch();
-        return match == null ? 0 : match.getTimeLeft();
+        if (match == null) {
+            return 0;
+        }
+        return match.getTimeLeft();
     }
 
     /**
@@ -185,7 +178,10 @@ public class GameSession {
      */
     public int getRemainingBalls(Side side) {
         Match match = getMatch();
-        return match == null ? 0 : match.getRemainingBalls(side);
+        if (match == null) {
+            return 0;
+        }
+        return match.getRemainingBalls(side);
     }
 
     /**
@@ -209,25 +205,49 @@ public class GameSession {
             return series.getSeriesWinner();
         }
         Match match = getMatch();
-        return match == null ? Winner.NONE : match.getWinner();
+        if (match == null) {
+            return Winner.NONE;
+        }
+        return match.getWinner();
     }
 
+    /**
+     * Devuelve si la partida es una serie de supervivencia.
+     */
     public boolean isSurvival() {
         return series != null;
     }
 
+    /**
+     * Devuelve las rondas ganadas en supervivencia (0 si no es supervivencia).
+     */
     public int getRoundsWon() {
-        return series == null ? 0 : series.getRoundsWon();
+        if (series == null) {
+            return 0;
+        }
+        return series.getRoundsWon();
     }
 
+    /**
+     * Devuelve las rondas jugadas en supervivencia (0 si no es supervivencia).
+     */
     public int getRoundsPlayed() {
-        return series == null ? 0 : series.getRoundsPlayed();
+        if (series == null) {
+            return 0;
+        }
+        return series.getRoundsPlayed();
     }
 
+    /**
+     * Devuelve los balones con que empieza cada lado en supervivencia.
+     */
     public int getBallsPerSide() {
         return config.getBallsPerSide();
     }
 
+    /**
+     * Devuelve el controlador del lado izquierdo (humano o maquina).
+     */
     public PlayerController getLeftController() {
         if (series != null) {
             return series.getLeftController();
@@ -235,6 +255,9 @@ public class GameSession {
         return runner.getLeftController();
     }
 
+    /**
+     * Devuelve el controlador del lado derecho (humano o maquina).
+     */
     public PlayerController getRightController() {
         if (series != null) {
             return series.getRightController();
@@ -242,34 +265,58 @@ public class GameSession {
         return runner.getRightController();
     }
 
+    /**
+     * Devuelve la configuracion de la partida.
+     */
     public MatchConfig getConfig() {
         return config;
     }
 
+    /**
+     * Devuelve la cancha.
+     */
     public Field getField() {
         return field;
     }
 
+    /**
+     * Devuelve el personaje del lado izquierdo.
+     */
     public GameCharacter getLeftCharacter() {
         return leftCharacter;
     }
 
+    /**
+     * Devuelve el personaje del lado derecho.
+     */
     public GameCharacter getRightCharacter() {
         return rightCharacter;
     }
 
+    /**
+     * Devuelve el jugador del lado izquierdo.
+     */
     public Player getLeftPlayer() {
         return leftPlayer;
     }
 
+    /**
+     * Devuelve el jugador del lado derecho.
+     */
     public Player getRightPlayer() {
         return rightPlayer;
     }
 
+    /**
+     * Devuelve si la partida esta pausada.
+     */
     public boolean isPaused() {
         return paused;
     }
 
+    /**
+     * Devuelve si la partida ya empezo.
+     */
     public boolean isStarted() {
         return started;
     }

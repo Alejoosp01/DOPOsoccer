@@ -1,7 +1,5 @@
 package domain;
 
-import java.awt.geom.Rectangle2D;
-
 /**
  * Balon del partido.
  * Guarda posicion, velocidad y los efectos de los poderes (Empuje e Ilusion).
@@ -9,7 +7,6 @@ import java.awt.geom.Rectangle2D;
  */
 public class Ball {
 
-    public static final double GRAVITY = 1800;
     public static final double RESTITUTION = 0.75;
     public static final double GROUND_FRICTION = 0.98;
     public static final double MIN_SPEED = 5;
@@ -64,7 +61,7 @@ public class Ball {
         if (dt <= 0 || field == null) {
             return;
         }
-        velocityY += GRAVITY * dt;
+        velocityY += Field.GRAVITY * dt;
         x += velocityX * dt;
         y += velocityY * dt;
 
@@ -97,8 +94,8 @@ public class Ball {
     /**
      * Devuelve el rectangulo que ocupa el balon.
      */
-    public Rectangle2D.Double getBounds() {
-        return new Rectangle2D.Double(x - radius, y - radius, radius * 2, radius * 2);
+    public Hitbox getBounds() {
+        return new Hitbox(x - radius, y - radius, radius * 2, radius * 2);
     }
 
     /**

@@ -13,7 +13,7 @@ public class MachineControllerTest {
     private Player right;
 
     @BeforeEach
-    public void setUp() throws POOBSoccerException {
+    public void setUp() throws DOPOSoccerException {
         GameCharacter leftCharacter = new GameCharacter(
                 "Left", new Country("Left", new FreezePower()), 3, 3, 3);
         GameCharacter rightCharacter = new GameCharacter(

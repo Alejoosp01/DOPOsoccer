@@ -28,7 +28,7 @@ import domain.GameCharacter;
 import domain.GameMode;
 import domain.MatchConfig;
 import domain.MatchType;
-import domain.POOBSoccerException;
+import domain.DOPOSoccerException;
 
 /**
  * Pantalla de configuracion: modalidad, forma de terminar, regla del partido
@@ -83,7 +83,7 @@ public final class SetupPanel extends JPanel {
     private ArrayList<GameCharacter> loadCharacters() {
         try {
             return CharacterCatalog.createCharacters();
-        } catch (POOBSoccerException exception) {
+        } catch (DOPOSoccerException exception) {
             return new ArrayList<GameCharacter>();
         }
     }
@@ -394,12 +394,18 @@ public final class SetupPanel extends JPanel {
         }
         MatchType type = selectedType();
         MatchConfig config;
-        if (type == MatchType.GOALS) {
-            config = MatchConfig.goals(selectedMode(), selectedGoalTarget());
-        } else if (type == MatchType.SURVIVAL) {
-            config = MatchConfig.survival(SURVIVAL_BALLS);
-        } else {
-            config = MatchConfig.time(selectedMode());
+        try {
+            if (type == MatchType.GOALS) {
+                config = MatchConfig.goals(selectedMode(), selectedGoalTarget());
+            } else if (type == MatchType.SURVIVAL) {
+                config = MatchConfig.survival(SURVIVAL_BALLS);
+            } else {
+                config = MatchConfig.time(selectedMode());
+            }
+        } catch (DOPOSoccerException exception) {
+            JOptionPane.showMessageDialog(this, exception.getMessage(),
+                    "Configuracion no valida", JOptionPane.WARNING_MESSAGE);
+            return;
         }
         onStart.accept(new GameSetup(config, left, right));
     }

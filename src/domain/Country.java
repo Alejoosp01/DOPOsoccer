@@ -8,12 +8,12 @@ public class Country {
     private String name;
     private Power power;
 
-    public Country(String name, Power power) throws POOBSoccerException {
+    public Country(String name, Power power) throws DOPOSoccerException {
         if (name == null || name.trim().isEmpty()) {
-            throw new POOBSoccerException(POOBSoccerException.EMPTY_NAME);
+            throw new DOPOSoccerException(DOPOSoccerException.EMPTY_NAME);
         }
         if (power == null) {
-            throw new POOBSoccerException(POOBSoccerException.NO_POWER);
+            throw new DOPOSoccerException(DOPOSoccerException.NO_POWER);
         }
         this.name = name;
         this.power = power;

@@ -371,7 +371,11 @@ public class Match {
         if (Math.abs(dx) < 0.001) {
             direction = player.getAttackDirection();
         } else {
-            direction = dx > 0 ? 1 : -1;
+            if (dx > 0) {
+                direction = 1;
+            } else {
+                direction = -1;
+            }
         }
         double minDistance = player.getWidth() / 2 + ball.getRadius();
         if (ball.getVelocityX() * direction <= 0) {

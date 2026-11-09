@@ -8,6 +8,8 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
+import domain.DOPOSoccer;
+
 /**
  * Ventana principal. Usa CardLayout para alternar entre menu, configuracion
  * y juego sin abrir varias ventanas.
@@ -25,7 +27,7 @@ public final class GameFrame extends JFrame {
     private transient GameSetup lastSetup;
 
     public GameFrame() {
-        super("POOB Soccer");
+        super("DOPO Soccer");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         cardLayout = new CardLayout();
         cards = new JPanel(cardLayout);
@@ -71,7 +73,7 @@ public final class GameFrame extends JFrame {
         if (gamePanel != null) {
             cards.remove(gamePanel);
         }
-        GameSession session = new GameSession(setup.getConfig(),
+        DOPOSoccer session = new DOPOSoccer(setup.getConfig(),
                 setup.getLeftCharacter(), setup.getRightCharacter());
         gamePanel = new GamePanel(session, this::showMenu, this::rematch);
         cards.add(gamePanel, "game");

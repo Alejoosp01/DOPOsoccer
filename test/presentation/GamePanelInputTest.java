@@ -18,7 +18,8 @@ import domain.GameCharacter;
 import domain.GameMode;
 import domain.HumanController;
 import domain.MatchConfig;
-import domain.POOBSoccerException;
+import domain.DOPOSoccer;
+import domain.DOPOSoccerException;
 
 /**
  * Pruebas de los enlaces de teclado del panel de juego.
@@ -27,15 +28,15 @@ import domain.POOBSoccerException;
 public class GamePanelInputTest {
 
     private GamePanel panel;
-    private GameSession session;
+    private DOPOSoccer session;
 
     @BeforeEach
-    public void setUp() throws POOBSoccerException {
+    public void setUp() throws DOPOSoccerException {
         GameCharacter left = new GameCharacter("Left",
                 new Country("Left", new FreezePower()), 3, 3, 3);
         GameCharacter right = new GameCharacter("Right",
                 new Country("Right", new FreezePower()), 3, 3, 3);
-        session = new GameSession(MatchConfig.time(GameMode.PVP), left, right);
+        session = new DOPOSoccer(MatchConfig.time(GameMode.PVP), left, right);
         panel = new GamePanel(session, () -> { }, () -> { });
     }
 

@@ -1,48 +1,35 @@
-package presentation;
+package domain;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import domain.Ball;
-import domain.FreezePower;
-import domain.GameCharacter;
-import domain.GameMode;
-import domain.HumanController;
-import domain.MachineController;
-import domain.Match;
-import domain.MatchConfig;
-import domain.MatchState;
-import domain.POOBSoccerException;
-import domain.Side;
-import domain.Winner;
-
-public class GameSessionTest {
+public class DOPOSoccerTest {
 
     private GameCharacter leftCharacter;
     private GameCharacter rightCharacter;
 
     @BeforeEach
-    public void setUp() throws POOBSoccerException {
+    public void setUp() throws DOPOSoccerException {
         leftCharacter = new GameCharacter("Left",
-                new domain.Country("Left", new FreezePower()), 3, 3, 3);
+                new Country("Left", new FreezePower()), 3, 3, 3);
         rightCharacter = new GameCharacter("Right",
-                new domain.Country("Right", new FreezePower()), 3, 3, 3);
+                new Country("Right", new FreezePower()), 3, 3, 3);
     }
 
-    private GameSession session(MatchConfig config) {
-        return new GameSession(config, leftCharacter, rightCharacter);
+    private DOPOSoccer session(MatchConfig config) {
+        return new DOPOSoccer(config, leftCharacter, rightCharacter);
     }
 
-    private void scoreInRightGoal(GameSession session) {
+    private void scoreInRightGoal(DOPOSoccer session) {
         Match match = session.getMatch();
         Ball ball = match.getBall();
         ball.setPosition(1230, 500);
         ball.setVelocity(0, 0);
     }
 
-    private void scoreInLeftGoal(GameSession session) {
+    private void scoreInLeftGoal(DOPOSoccer session) {
         Match match = session.getMatch();
         Ball ball = match.getBall();
         ball.setPosition(50, 500);
@@ -50,8 +37,8 @@ public class GameSessionTest {
     }
 
     @Test
-    public void shouldCreateHumanControllersForPvp() {
-        GameSession session = session(MatchConfig.time(GameMode.PVP));
+    public void shouldCreateHumanControllersForPvp() throws DOPOSoccerException {
+        DOPOSoccer session = session(MatchConfig.time(GameMode.PVP));
 
         assertTrue(session.getLeftController() instanceof HumanController);
         assertTrue(session.getRightController() instanceof HumanController);
@@ -59,24 +46,24 @@ public class GameSessionTest {
     }
 
     @Test
-    public void shouldCreateHumanAndMachineForPvm() {
-        GameSession session = session(MatchConfig.time(GameMode.PVM));
+    public void shouldCreateHumanAndMachineForPvm() throws DOPOSoccerException {
+        DOPOSoccer session = session(MatchConfig.time(GameMode.PVM));
 
         assertTrue(session.getLeftController() instanceof HumanController);
         assertTrue(session.getRightController() instanceof MachineController);
     }
 
     @Test
-    public void shouldCreateMachineControllersForMvm() {
-        GameSession session = session(MatchConfig.time(GameMode.MVM));
+    public void shouldCreateMachineControllersForMvm() throws DOPOSoccerException {
+        DOPOSoccer session = session(MatchConfig.time(GameMode.MVM));
 
         assertTrue(session.getLeftController() instanceof MachineController);
         assertTrue(session.getRightController() instanceof MachineController);
     }
 
     @Test
-    public void shouldStartSingleMatchInPlayingState() {
-        GameSession session = session(MatchConfig.time(GameMode.PVP));
+    public void shouldStartSingleMatchInPlayingState() throws DOPOSoccerException {
+        DOPOSoccer session = session(MatchConfig.time(GameMode.PVP));
         assertFalse(session.isStarted());
 
         session.start();
@@ -88,8 +75,8 @@ public class GameSessionTest {
     }
 
     @Test
-    public void shouldAdvanceMatchTimeWhenUpdated() {
-        GameSession session = session(MatchConfig.time(GameMode.PVP));
+    public void shouldAdvanceMatchTimeWhenUpdated() throws DOPOSoccerException {
+        DOPOSoccer session = session(MatchConfig.time(GameMode.PVP));
         session.start();
         double before = session.getTimeLeft();
 
@@ -99,8 +86,8 @@ public class GameSessionTest {
     }
 
     @Test
-    public void shouldMoveHumanPlayerThroughController() {
-        GameSession session = session(MatchConfig.time(GameMode.PVP));
+    public void shouldMoveHumanPlayerThroughController() throws DOPOSoccerException {
+        DOPOSoccer session = session(MatchConfig.time(GameMode.PVP));
         session.start();
         HumanController controller = (HumanController) session.getLeftController();
         double before = session.getLeftPlayer().getX();
@@ -112,8 +99,8 @@ public class GameSessionTest {
     }
 
     @Test
-    public void shouldPauseAndResumeSingleMatch() {
-        GameSession session = session(MatchConfig.time(GameMode.PVP));
+    public void shouldPauseAndResumeSingleMatch() throws DOPOSoccerException {
+        DOPOSoccer session = session(MatchConfig.time(GameMode.PVP));
         session.start();
         session.update(0.5);
         double beforePause = session.getTimeLeft();
@@ -129,8 +116,8 @@ public class GameSessionTest {
     }
 
     @Test
-    public void shouldNotPauseAfterMatchFinished() {
-        GameSession session = session(MatchConfig.goals(GameMode.PVP, 3));
+    public void shouldNotPauseAfterMatchFinished() throws DOPOSoccerException {
+        DOPOSoccer session = session(MatchConfig.goals(GameMode.PVP, 3));
         session.start();
         for (int i = 0; i < 3; i++) {
             scoreInRightGoal(session);
@@ -144,8 +131,8 @@ public class GameSessionTest {
     }
 
     @Test
-    public void shouldStartSurvivalSeriesWithHumanAndMachine() {
-        GameSession session = session(MatchConfig.survival(2));
+    public void shouldStartSurvivalSeriesWithHumanAndMachine() throws DOPOSoccerException {
+        DOPOSoccer session = session(MatchConfig.survival(2));
         session.start();
 
         assertTrue(session.isSurvival());
@@ -159,8 +146,8 @@ public class GameSessionTest {
     }
 
     @Test
-    public void shouldAdvanceSurvivalRoundWhenPlayerWins() {
-        GameSession session = session(MatchConfig.survival(1));
+    public void shouldAdvanceSurvivalRoundWhenPlayerWins() throws DOPOSoccerException {
+        DOPOSoccer session = session(MatchConfig.survival(1));
         session.start();
         Match first = session.getMatch();
 
@@ -181,8 +168,8 @@ public class GameSessionTest {
     }
 
     @Test
-    public void shouldFinishSurvivalSeriesWhenPlayerLoses() {
-        GameSession session = session(MatchConfig.survival(1));
+    public void shouldFinishSurvivalSeriesWhenPlayerLoses() throws DOPOSoccerException {
+        DOPOSoccer session = session(MatchConfig.survival(1));
         session.start();
 
         scoreInLeftGoal(session);
@@ -197,8 +184,8 @@ public class GameSessionTest {
     }
 
     @Test
-    public void shouldAccumulateSeveralSurvivalRoundsWon() {
-        GameSession session = session(MatchConfig.survival(1));
+    public void shouldAccumulateSeveralSurvivalRoundsWon() throws DOPOSoccerException {
+        DOPOSoccer session = session(MatchConfig.survival(1));
         session.start();
 
         scoreInRightGoal(session);
@@ -214,8 +201,8 @@ public class GameSessionTest {
     }
 
     @Test
-    public void shouldPauseSurvivalRound() {
-        GameSession session = session(MatchConfig.survival(1));
+    public void shouldPauseSurvivalRound() throws DOPOSoccerException {
+        DOPOSoccer session = session(MatchConfig.survival(1));
         session.start();
 
         assertTrue(session.pause());

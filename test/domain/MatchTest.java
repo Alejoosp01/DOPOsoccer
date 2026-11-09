@@ -10,7 +10,7 @@ public class MatchTest {
     private GameCharacter character;
 
     @BeforeEach
-    public void setUp() throws POOBSoccerException {
+    public void setUp() throws DOPOSoccerException {
         character = new GameCharacter("Test", new Country("Test", new FreezePower()), 3, 3, 3);
     }
 
@@ -33,7 +33,7 @@ public class MatchTest {
     }
 
     @Test
-    public void shouldStartReadyAndAtZero() {
+    public void shouldStartReadyAndAtZero() throws DOPOSoccerException {
         Match match = createMatch(MatchConfig.time(GameMode.PVP));
         assertEquals(MatchState.READY, match.getState());
         assertEquals(0, match.getScore().getLeftGoals());
@@ -44,7 +44,7 @@ public class MatchTest {
     }
 
     @Test
-    public void shouldStartPlayingWithPositionsReset() {
+    public void shouldStartPlayingWithPositionsReset() throws DOPOSoccerException {
         Match match = createMatch(MatchConfig.time(GameMode.PVP));
         match.start();
         assertEquals(MatchState.PLAYING, match.getState());
@@ -55,7 +55,7 @@ public class MatchTest {
     }
 
     @Test
-    public void shouldNotUpdateBeforeStart() {
+    public void shouldNotUpdateBeforeStart() throws DOPOSoccerException {
         Match match = createMatch(MatchConfig.time(GameMode.PVP));
         match.update(5);
         assertEquals(MatchState.READY, match.getState());
@@ -63,7 +63,7 @@ public class MatchTest {
     }
 
     @Test
-    public void shouldCreditRivalWhenBallEntersLeftGoal() {
+    public void shouldCreditRivalWhenBallEntersLeftGoal() throws DOPOSoccerException {
         Match match = createMatch(MatchConfig.time(GameMode.PVP));
         match.start();
         scoreInLeftGoal(match);
@@ -74,7 +74,7 @@ public class MatchTest {
     }
 
     @Test
-    public void shouldCreditLeftWhenBallEntersRightGoal() {
+    public void shouldCreditLeftWhenBallEntersRightGoal() throws DOPOSoccerException {
         Match match = createMatch(MatchConfig.time(GameMode.PVP));
         match.start();
         scoreInRightGoal(match);
@@ -83,7 +83,7 @@ public class MatchTest {
     }
 
     @Test
-    public void shouldNotScoreWhenBallIsOnlyPartiallyInsideGoal() {
+    public void shouldNotScoreWhenBallIsOnlyPartiallyInsideGoal() throws DOPOSoccerException {
         Match match = createMatch(MatchConfig.time(GameMode.PVP));
         match.start();
         match.getBall().setPosition(95, 500);
@@ -93,7 +93,7 @@ public class MatchTest {
     }
 
     @Test
-    public void shouldResetAfterGoalPause() {
+    public void shouldResetAfterGoalPause() throws DOPOSoccerException {
         Match match = createMatch(MatchConfig.time(GameMode.PVP));
         match.start();
         scoreInLeftGoal(match);
@@ -107,7 +107,7 @@ public class MatchTest {
     }
 
     @Test
-    public void shouldPauseAndResumeWithoutAdvancing() {
+    public void shouldPauseAndResumeWithoutAdvancing() throws DOPOSoccerException {
         Match match = createMatch(MatchConfig.time(GameMode.PVP));
         match.start();
         match.update(0.5);
@@ -123,7 +123,7 @@ public class MatchTest {
     }
 
     @Test
-    public void shouldFinishWhenGoalTargetIsReached() {
+    public void shouldFinishWhenGoalTargetIsReached() throws DOPOSoccerException {
         Match match = createMatch(MatchConfig.goals(GameMode.PVP, 3));
         match.start();
         for (int i = 0; i < 2; i++) {
@@ -140,7 +140,7 @@ public class MatchTest {
     }
 
     @Test
-    public void shouldFinishSurvivalWhenRivalRunsOutOfBalls() {
+    public void shouldFinishSurvivalWhenRivalRunsOutOfBalls() throws DOPOSoccerException {
         Match match = createMatch(MatchConfig.survival(1));
         match.start();
         assertEquals(1, match.getRemainingBalls(Side.LEFT));
@@ -156,7 +156,7 @@ public class MatchTest {
     }
 
     @Test
-    public void shouldActivateGoldenGoalWhenTimeExpiresTied() {
+    public void shouldActivateGoldenGoalWhenTimeExpiresTied() throws DOPOSoccerException {
         Match match = createMatch(MatchConfig.time(GameMode.PVP, 1));
         match.start();
         match.update(1.1);
@@ -172,7 +172,7 @@ public class MatchTest {
     }
 
     @Test
-    public void shouldFinishByTimeWithLeader() {
+    public void shouldFinishByTimeWithLeader() throws DOPOSoccerException {
         Match match = createMatch(MatchConfig.time(GameMode.PVP, 1));
         match.start();
         scoreInRightGoal(match);
@@ -188,7 +188,7 @@ public class MatchTest {
     }
 
     @Test
-    public void shouldMovePlayerFromMatch() {
+    public void shouldMovePlayerFromMatch() throws DOPOSoccerException {
         Match match = createMatch(MatchConfig.time(GameMode.PVP));
         match.start();
         Player left = match.getLeftPlayer();
@@ -198,7 +198,7 @@ public class MatchTest {
     }
 
     @Test
-    public void shouldNotMoveWhenPaused() {
+    public void shouldNotMoveWhenPaused() throws DOPOSoccerException {
         Match match = createMatch(MatchConfig.time(GameMode.PVP));
         match.start();
         double startX = match.getLeftPlayer().getX();
@@ -208,7 +208,7 @@ public class MatchTest {
     }
 
     @Test
-    public void shouldJumpFromMatch() {
+    public void shouldJumpFromMatch() throws DOPOSoccerException {
         Match match = createMatch(MatchConfig.time(GameMode.PVP));
         match.start();
         assertTrue(match.jump(Side.LEFT));
@@ -216,7 +216,7 @@ public class MatchTest {
     }
 
     @Test
-    public void shouldPushBallWhenPlayerTouchesIt() {
+    public void shouldPushBallWhenPlayerTouchesIt() throws DOPOSoccerException {
         Match match = createMatch(MatchConfig.time(GameMode.PVP));
         match.start();
         Player left = match.getLeftPlayer();
@@ -230,7 +230,7 @@ public class MatchTest {
     }
 
     @Test
-    public void shouldKeepPlayersApart() {
+    public void shouldKeepPlayersApart() throws DOPOSoccerException {
         Match match = createMatch(MatchConfig.time(GameMode.PVP));
         match.start();
         Player left = match.getLeftPlayer();
@@ -244,7 +244,7 @@ public class MatchTest {
     }
 
     @Test
-    public void shouldStunRivalHitDirectlyWithoutBall() {
+    public void shouldStunRivalHitDirectlyWithoutBall() throws DOPOSoccerException {
         Match match = createMatch(MatchConfig.time(GameMode.PVP));
         match.start();
         Player left = match.getLeftPlayer();
@@ -263,7 +263,7 @@ public class MatchTest {
     }
 
     @Test
-    public void shouldNotStunRivalJumpingOverTheFoot() {
+    public void shouldNotStunRivalJumpingOverTheFoot() throws DOPOSoccerException {
         Match match = createMatch(MatchConfig.time(GameMode.PVP));
         match.start();
         Player left = match.getLeftPlayer();
@@ -278,7 +278,7 @@ public class MatchTest {
     }
 
     @Test
-    public void shouldNotStunRivalOutOfReach() {
+    public void shouldNotStunRivalOutOfReach() throws DOPOSoccerException {
         Match match = createMatch(MatchConfig.time(GameMode.PVP));
         match.start();
         Player left = match.getLeftPlayer();
@@ -294,7 +294,7 @@ public class MatchTest {
     }
 
     @Test
-    public void shouldNotStunWithKickWhileKickIsCoolingDown() {
+    public void shouldNotStunWithKickWhileKickIsCoolingDown() throws DOPOSoccerException {
         Match match = createMatch(MatchConfig.time(GameMode.PVP));
         match.start();
         Player left = match.getLeftPlayer();
@@ -310,7 +310,7 @@ public class MatchTest {
     }
 
     @Test
-    public void shouldStunRivalHitDirectlyWhileKickingTheBall() {
+    public void shouldStunRivalHitDirectlyWhileKickingTheBall() throws DOPOSoccerException {
         Match match = createMatch(MatchConfig.time(GameMode.PVP));
         match.start();
         Player left = match.getLeftPlayer();
@@ -327,7 +327,7 @@ public class MatchTest {
     }
 
     @Test
-    public void shouldArmPowerFromMatchWhenReady() {
+    public void shouldArmPowerFromMatchWhenReady() throws DOPOSoccerException {
         Match match = createMatch(MatchConfig.time(GameMode.PVP));
         match.start();
         for (int i = 0; i < 100; i++) {

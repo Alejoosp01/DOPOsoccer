@@ -15,15 +15,15 @@ public class GameCharacter {
     private int jump;
     private int strength;
 
-    public GameCharacter(String name, Country country, int speed, int jump, int strength) throws POOBSoccerException {
+    public GameCharacter(String name, Country country, int speed, int jump, int strength) throws DOPOSoccerException {
         if (name == null || name.trim().isEmpty()) {
-            throw new POOBSoccerException(POOBSoccerException.EMPTY_NAME);
+            throw new DOPOSoccerException(DOPOSoccerException.EMPTY_NAME);
         }
         if (country == null) {
-            throw new POOBSoccerException(POOBSoccerException.NO_COUNTRY);
+            throw new DOPOSoccerException(DOPOSoccerException.NO_COUNTRY);
         }
         if (!isValidStat(speed) || !isValidStat(jump) || !isValidStat(strength)) {
-            throw new POOBSoccerException(POOBSoccerException.INVALID_STAT);
+            throw new DOPOSoccerException(DOPOSoccerException.INVALID_STAT);
         }
         this.name = name;
         this.country = country;

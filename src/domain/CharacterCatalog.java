@@ -11,7 +11,7 @@ public class CharacterCatalog {
     /**
      * Crea y devuelve los 5 personajes disponibles.
      */
-    public static ArrayList<GameCharacter> createCharacters() throws POOBSoccerException {
+    public static ArrayList<GameCharacter> createCharacters() throws DOPOSoccerException {
         ArrayList<GameCharacter> characters = new ArrayList<GameCharacter>();
         characters.add(new GameCharacter("Corea del Sur", new Country("Corea del Sur", new PushPower()), 1, 2, 5));
         characters.add(new GameCharacter("Estados Unidos", new Country("Estados Unidos", new IllusionPower()), 2, 2, 4));

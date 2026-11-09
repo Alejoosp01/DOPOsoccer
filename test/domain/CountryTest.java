@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test;
 public class CountryTest {
 
     @Test
-    public void shouldCreateCountryWithPower() throws POOBSoccerException {
+    public void shouldCreateCountryWithPower() throws DOPOSoccerException {
         Country brasil = new Country("Brasil", new ConfusionPower());
         assertEquals("Brasil", brasil.getName());
         assertEquals("Confusion", brasil.getPower().getName());
@@ -15,15 +15,15 @@ public class CountryTest {
 
     @Test
     public void shouldNotCreateCountryWithoutName() {
-        POOBSoccerException e = assertThrows(POOBSoccerException.class,
+        DOPOSoccerException e = assertThrows(DOPOSoccerException.class,
                 () -> new Country("", new ConfusionPower()));
-        assertEquals(POOBSoccerException.EMPTY_NAME, e.getMessage());
+        assertEquals(DOPOSoccerException.EMPTY_NAME, e.getMessage());
     }
 
     @Test
     public void shouldNotCreateCountryWithoutPower() {
-        POOBSoccerException e = assertThrows(POOBSoccerException.class,
+        DOPOSoccerException e = assertThrows(DOPOSoccerException.class,
                 () -> new Country("Brasil", null));
-        assertEquals(POOBSoccerException.NO_POWER, e.getMessage());
+        assertEquals(DOPOSoccerException.NO_POWER, e.getMessage());
     }
 }

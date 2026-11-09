@@ -11,15 +11,23 @@ public final class HeadSoccerApp {
     private HeadSoccerApp() {
     }
 
+    /**
+     * Arranca el juego en el hilo de Swing.
+     */
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            try {
-                UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
-            } catch (Exception exception) {
-                // Si el look and feel no esta disponible se usa el del sistema.
-            }
-            GameFrame frame = new GameFrame();
-            frame.setVisible(true);
-        });
+        SwingUtilities.invokeLater(() -> openWindow());
+    }
+
+    /**
+     * Configura el estilo de Swing y abre la ventana principal.
+     */
+    private static void openWindow() {
+        try {
+            UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
+        } catch (Exception exception) {
+            // Si el look and feel no esta disponible se usa el del sistema.
+        }
+        GameFrame frame = new GameFrame();
+        frame.setVisible(true);
     }
 }
