@@ -1,5 +1,5 @@
 # =========================================================
-# POOBSoccer 2026-2 - .gitignore
+# DOPOSoccer 2026-2 - .gitignore
 # =========================================================
 
 # ---------- Archivo de estudio personal (NUNCA se sube) ----------
@@ -24,24 +24,27 @@ replay_pid*
 *.log
 dopo_errors.log
 
-# ---------- Eclipse ----------
+# ---------- Archivos que generan otros IDE (el proyecto usa solo VS Code) ----------
+.project
+.classpath
 .metadata/
 .settings/
-.recommenders/
-.loadpath
 .factorypath
 *.launch
+
+# ---------- Temporales ----------
 tmp/
 *.tmp
 *.bak
 *.swp
-*~.nib
-local.properties
-# .project y .classpath SI se versionan (limpios, con rutas relativas)
-# para que ambos IDEs abran el proyecto igual. Ver EXPLICACION_CODIGO.txt.
 
 # ---------- VS Code ----------
-.vscode/
+# Se versiona solo la configuracion compartida del proyecto
+# (carpetas de codigo, JUnit, clase principal y extension recomendada).
+.vscode/*
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/extensions.json
 *.code-workspace
 .history/
 .DopoSoccer/

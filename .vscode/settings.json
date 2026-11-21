@@ -1,0 +1,14 @@
+{
+    "java.project.sourcePaths": [
+        "src",
+        "test",
+        "resources"
+    ],
+    "java.project.referencedLibraries": [
+        "lib/**/*.jar"
+    ],
+    "java.project.outputPath": "bin",
+    "java.configuration.updateBuildConfiguration": "automatic",
+    "java.import.generatesMetadataFilesAtProjectRoot": false,
+    "files.encoding": "utf8"
+}
