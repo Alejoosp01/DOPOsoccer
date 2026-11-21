@@ -27,7 +27,8 @@ final class ObjectFiles {
         if (file == null) {
             throw new DOPOSoccerException(DOPOSoccerException.NO_FILE);
         }
-        try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(file))) {
+        try (FileOutputStream fileOut = new FileOutputStream(file);
+                ObjectOutputStream out = new ObjectOutputStream(fileOut)) {
             out.writeObject(object);
         } catch (IOException exception) {
             ErrorLog.record(exception);
@@ -45,7 +46,8 @@ final class ObjectFiles {
         if (!file.isFile()) {
             throw new DOPOSoccerException(DOPOSoccerException.FILE_NOT_FOUND);
         }
-        try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(file))) {
+        try (FileInputStream fileIn = new FileInputStream(file);
+                ObjectInputStream in = new ObjectInputStream(fileIn)) {
             return in.readObject();
         } catch (FileNotFoundException exception) {
             ErrorLog.record(exception);

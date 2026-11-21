@@ -15,7 +15,8 @@ public class Match implements Serializable {
     public static final double MAX_STEP = 1.0 / 120.0;
     public static final double KICK_DAMAGE = 10;
     public static final double SQUEEZE_POP_SPEED = 650;
-    public static final double SQUEEZE_SIDE_SPEED = 150;
+    public static final double SQUEEZE_SIDE_SPEED = 260;
+    public static final double SQUEEZE_MARGIN = 2;
     public static final double HEADER_FORWARD_SPEED = 180;
 
     private final MatchConfig config;
@@ -32,6 +33,7 @@ public class Match implements Serializable {
     private boolean suddenDeath;
     private boolean endedEarly;
     private Winner winner;
+    private double nextPopSide;
 
     public Match(MatchConfig config, Player leftPlayer, Player rightPlayer) {
         this(config, new Field(), leftPlayer, rightPlayer);
@@ -63,6 +65,7 @@ public class Match implements Serializable {
         this.suddenDeath = false;
         this.endedEarly = false;
         this.winner = Winner.NONE;
+        this.nextPopSide = 1;
         resetPositions();
     }
 
@@ -364,16 +367,68 @@ public class Match implements Serializable {
     }
 
     /**
-     * Resuelve los toques de balon de los dos jugadores. Si despues de eso el
-     * balon sigue tocando a ambos (quedo apretado entre los dos), lo hace saltar
-     * por encima de ellos para que nunca se quede pegado.
+     * Resuelve los toques de balon de los dos jugadores. Si el balon esta
+     * apretado entre los dos (no cabe en el espacio que dejan), lo hace saltar
+     * por encima de ellos; asi no queda rebotando de uno a otro sin salir.
      */
     private void resolveBallTouches() {
+        boolean touchesSomeone = leftPlayer.touchesBall(ball) || rightPlayer.touchesBall(ball);
+        if (touchesSomeone && isBallSqueezed()) {
+            resolveSqueezedShot();
+            popBallUp();
+            return;
+        }
         resolveBallTouch(leftPlayer);
         resolveBallTouch(rightPlayer);
-        if (leftPlayer.touchesBall(ball) && rightPlayer.touchesBall(ball)) {
-            popBallUp();
+    }
+
+    /**
+     * Si el balon apretado lleva un tiro de poder, primero mira si toca al
+     * rival del dueño (daño y efecto); solo si no, lo apaga el dueño.
+     */
+    private void resolveSqueezedShot() {
+        if (!ball.hasActiveShot()) {
+            return;
         }
+        Player owner = ball.getShotOwner();
+        Player rival = leftPlayer;
+        if (owner == leftPlayer) {
+            rival = rightPlayer;
+        }
+        if (rival.touchesBall(ball)) {
+            resolvePowerShotHit(rival);
+        } else if (owner.touchesBall(ball)) {
+            resolvePowerShotHit(owner);
+        }
+    }
+
+    /**
+     * Devuelve si el balon esta entre los dos jugadores, a la altura de ambos
+     * cuerpos, y el espacio entre ellos es menor que el diametro del balon.
+     */
+    private boolean isBallSqueezed() {
+        Hitbox first = leftPlayer.getBounds();
+        Hitbox second = rightPlayer.getBounds();
+        if (leftPlayer.getX() > rightPlayer.getX()) {
+            first = rightPlayer.getBounds();
+            second = leftPlayer.getBounds();
+        }
+        double radius = ball.getRadius();
+        double gap = second.getX() - first.getMaxX();
+        if (gap >= 2 * radius + SQUEEZE_MARGIN) {
+            return false;
+        }
+        boolean between = ball.getX() >= first.getMaxX() - radius
+                && ball.getX() <= second.getX() + radius;
+        return between && overlapsVertically(first) && overlapsVertically(second);
+    }
+
+    /**
+     * Devuelve si el balon esta a la altura del cuerpo indicado.
+     */
+    private boolean overlapsVertically(Hitbox body) {
+        return ball.getY() + ball.getRadius() > body.getY()
+                && ball.getY() - ball.getRadius() < body.getMaxY();
     }
 
     /**
@@ -387,12 +442,13 @@ public class Match implements Serializable {
         double newY = Math.max(ball.getRadius(), top - ball.getRadius() - 1);
         double middle = (leftPlayer.getX() + rightPlayer.getX()) / 2;
         double direction;
-        if (ball.getX() > middle) {
+        if (ball.getX() > middle + 1) {
             direction = 1;
-        } else if (ball.getX() < middle) {
+        } else if (ball.getX() < middle - 1) {
             direction = -1;
         } else {
-            direction = 0;
+            direction = nextPopSide;
+            nextPopSide = -nextPopSide;
         }
         ball.setPosition(ball.getX(), newY);
         ball.setVelocity(direction * SQUEEZE_SIDE_SPEED, -SQUEEZE_POP_SPEED);
