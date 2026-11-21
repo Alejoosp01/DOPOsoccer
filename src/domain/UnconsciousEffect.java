@@ -6,6 +6,8 @@ package domain;
  */
 public class UnconsciousEffect extends Effect {
 
+    private static final long serialVersionUID = 1L;
+
     public static final double LAUNCH_SPEED = 750;
 
     public UnconsciousEffect(double duration) {

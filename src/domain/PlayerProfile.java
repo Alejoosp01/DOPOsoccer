@@ -1,10 +1,14 @@
 package domain;
 
+import java.io.Serializable;
+
 /**
  * El jugador como persona: nombre, estadisticas y puntos acumulados.
  * Se conserva entre partidos (y en la Version dos se guardara en archivo).
  */
-public class PlayerProfile {
+public class PlayerProfile implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private final String name;
     private final Stats stats;

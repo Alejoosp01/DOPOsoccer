@@ -7,6 +7,8 @@ package domain;
  */
 public class HumanController implements PlayerController {
 
+    private static final long serialVersionUID = 1L;
+
     private double direction;
     private boolean jumpRequested;
     private boolean kickRequested;
@@ -80,6 +82,15 @@ public class HumanController implements PlayerController {
 
     public boolean isPowerRequested() {
         return powerRequested;
+    }
+
+    /**
+     * Olvida la direccion y las ordenes pendientes.
+     */
+    @Override
+    public void clearInput() {
+        direction = 0;
+        clearRequests();
     }
 
     /**

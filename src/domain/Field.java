@@ -1,12 +1,16 @@
 package domain;
 
+import java.io.Serializable;
+
 /**
  * Cancha del partido.
  * El origen (0, 0) esta en la esquina superior izquierda y el eje Y crece
  * hacia abajo, como en Java2D. Los arcos quedan dentro de la cancha: el arco
  * izquierdo ocupa los primeros pixeles y el derecho los ultimos.
  */
-public class Field {
+public class Field implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     public static final double DEFAULT_WIDTH = 1280;
     public static final double DEFAULT_HEIGHT = 720;

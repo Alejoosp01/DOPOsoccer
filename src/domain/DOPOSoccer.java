@@ -1,11 +1,15 @@
 package domain;
 
+import java.io.Serializable;
+
 /**
  * Fachada del juego: es la unica clase del dominio que necesita la interfaz.
  * Crea el partido con la configuracion, los personajes y los perfiles de los
  * dos jugadores, lo avanza, lo pausa, lo termina y reparte los puntos.
  */
-public class DOPOSoccer {
+public class DOPOSoccer implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     public static final int WINNER_POINTS = 100;
     public static final int LOSER_POINTS = 25;

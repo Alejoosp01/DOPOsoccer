@@ -1,15 +1,22 @@
 package domain;
 
+import java.io.Serializable;
+
 /**
  * Motor de un partido.
  * Une cancha, balon, jugadores, marcador, tiempo y estado.
  * No depende de Swing: toda la simulacion se avanza con update(dt).
  */
-public class Match {
+public class Match implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     public static final double GOAL_PAUSE_SECONDS = 1.0;
     public static final double MAX_STEP = 1.0 / 120.0;
     public static final double KICK_DAMAGE = 10;
+    public static final double SQUEEZE_POP_SPEED = 650;
+    public static final double SQUEEZE_SIDE_SPEED = 150;
+    public static final double HEADER_FORWARD_SPEED = 180;
 
     private final MatchConfig config;
     private final Field field;
@@ -101,8 +108,7 @@ public class Match {
             rightPlayer.update(step, field);
             resolvePlayerCollision();
             ball.update(step, field);
-            resolveBallTouch(leftPlayer);
-            resolveBallTouch(rightPlayer);
+            resolveBallTouches();
             remaining = remaining - step;
 
             if (checkGoal()) {
@@ -358,26 +364,121 @@ public class Match {
     }
 
     /**
-     * Empuja el balon alejandolo del centro del jugador.
+     * Resuelve los toques de balon de los dos jugadores. Si despues de eso el
+     * balon sigue tocando a ambos (quedo apretado entre los dos), lo hace saltar
+     * por encima de ellos para que nunca se quede pegado.
+     */
+    private void resolveBallTouches() {
+        resolveBallTouch(leftPlayer);
+        resolveBallTouch(rightPlayer);
+        if (leftPlayer.touchesBall(ball) && rightPlayer.touchesBall(ball)) {
+            popBallUp();
+        }
+    }
+
+    /**
+     * Saca el balon por encima de la cabeza mas alta de los dos jugadores y lo
+     * lanza hacia arriba, inclinado hacia el lado donde haya mas espacio.
+     */
+    private void popBallUp() {
+        double leftTop = leftPlayer.getBounds().getY();
+        double rightTop = rightPlayer.getBounds().getY();
+        double top = Math.min(leftTop, rightTop);
+        double newY = Math.max(ball.getRadius(), top - ball.getRadius() - 1);
+        double middle = (leftPlayer.getX() + rightPlayer.getX()) / 2;
+        double direction;
+        if (ball.getX() > middle) {
+            direction = 1;
+        } else if (ball.getX() < middle) {
+            direction = -1;
+        } else {
+            direction = 0;
+        }
+        ball.setPosition(ball.getX(), newY);
+        ball.setVelocity(direction * SQUEEZE_SIDE_SPEED, -SQUEEZE_POP_SPEED);
+    }
+
+    /**
+     * Rebota el balon contra el cuerpo del jugador como un circulo contra un
+     * rectangulo: lo saca por el lado mas cercano (costado, cabeza o pies) y le
+     * da al menos TOUCH_SPEED hacia afuera. Si cae sobre la cabeza hace un
+     * cabezazo y lo empuja hacia adelante para que no se quede quieto encima.
      */
     private void pushBall(Player player) {
-        double dx = ball.getX() - player.getX();
-        double direction;
-        if (Math.abs(dx) < 0.001) {
-            direction = player.getAttackDirection();
-        } else if (dx > 0) {
-            direction = 1;
+        Hitbox body = player.getBounds();
+        double radius = ball.getRadius();
+        double closestX = clamp(ball.getX(), body.getX(), body.getMaxX());
+        double closestY = clamp(ball.getY(), body.getY(), body.getMaxY());
+        double normalX = ball.getX() - closestX;
+        double normalY = ball.getY() - closestY;
+        double distance = Math.sqrt(normalX * normalX + normalY * normalY);
+        if (distance > radius) {
+            return;
+        }
+        if (distance < 0.0001) {
+            double dx = ball.getX() - player.getX();
+            if (ball.getY() < body.getY() + radius) {
+                normalX = 0;
+                normalY = -1;
+                closestX = ball.getX();
+                closestY = body.getY();
+            } else {
+                normalX = sideOf(dx, player.getAttackDirection());
+                normalY = 0;
+                if (normalX > 0) {
+                    closestX = body.getMaxX();
+                } else {
+                    closestX = body.getX();
+                }
+                closestY = ball.getY();
+            }
         } else {
-            direction = -1;
+            normalX = normalX / distance;
+            normalY = normalY / distance;
         }
-        double minDistance = player.getWidth() / 2 + ball.getRadius();
-        if (ball.getVelocityX() * direction <= 0) {
-            ball.setPosition(player.getX() + direction * minDistance, ball.getY());
+        ball.setPosition(closestX + normalX * (radius + 0.5), closestY + normalY * (radius + 0.5));
+
+        double relativeX = ball.getVelocityX() - player.getVelocityX();
+        double relativeY = ball.getVelocityY() - player.getVelocityY();
+        double along = relativeX * normalX + relativeY * normalY;
+        if (along < Player.TOUCH_SPEED) {
+            double bounce = Math.max(-along * Ball.RESTITUTION, Player.TOUCH_SPEED);
+            double change = bounce - along;
+            relativeX = relativeX + change * normalX;
+            relativeY = relativeY + change * normalY;
         }
-        if (ball.getVelocityX() * direction < Player.TOUCH_SPEED) {
-            ball.setVelocity(direction * Player.TOUCH_SPEED,
-                    Math.min(ball.getVelocityY(), -Player.TOUCH_LIFT));
+        double velocityX = relativeX + player.getVelocityX();
+        double velocityY = relativeY + player.getVelocityY();
+
+        boolean header = normalY < -0.7;
+        if (header && Math.abs(velocityX) < HEADER_FORWARD_SPEED) {
+            double side = sideOf(ball.getX() - player.getX(), player.getAttackDirection());
+            velocityX = side * HEADER_FORWARD_SPEED;
         }
+        if (Math.abs(normalX) > 0.7) {
+            velocityY = Math.min(velocityY, -Player.TOUCH_LIFT);
+        }
+        ball.setVelocity(velocityX, velocityY);
+    }
+
+    /**
+     * Devuelve 1 o -1 segun el signo de dx; si es casi 0 usa la direccion indicada.
+     */
+    private static double sideOf(double dx, int fallback) {
+        if (dx > 0.001) {
+            return 1;
+        }
+        if (dx < -0.001) {
+            return -1;
+        }
+        return fallback;
+    }
+
+    /**
+     * Devuelve value limitado al rango [min, max].
+     */
+    private static double clamp(double value, double min, double max) {
+        return Math.max(min, Math.min(max, value));
     }
 
     /**
