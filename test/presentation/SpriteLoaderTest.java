@@ -75,8 +75,61 @@ public class SpriteLoaderTest {
             assertNotNull(SpriteLoader.characterFolder(character));
         }
         GameCharacter korea = new GameCharacter("Corea del Sur", new BlueAuraShot());
-        assertEquals("/sprites/characters/korea/walk.png",
-                SpriteLoader.characterPath(korea, SpriteLoader.WALK));
+        assertEquals("/sprites/characters/korea/run",
+                SpriteLoader.characterPath(korea, SpriteLoader.RUN));
+    }
+
+    @Test
+    public void everyCharacterShouldHaveEveryAnimation() throws DOPOSoccerException {
+        String[] actions = {SpriteLoader.IDLE, SpriteLoader.RUN, SpriteLoader.JUMP, SpriteLoader.KICK,
+            SpriteLoader.HEADER, SpriteLoader.POWER, SpriteLoader.CELEBRATION, SpriteLoader.DEFEAT};
+        for (GameCharacter character : CharacterCatalog.createCharacters()) {
+            for (String action : actions) {
+                BufferedImage[] frames = SpriteLoader.characterFrames(character, action);
+                assertTrue(frames.length >= 4, character.getName() + " " + action);
+                assertEquals(SpriteLoader.CELL_SIZE, frames[0].getWidth());
+                assertEquals(SpriteLoader.CELL_SIZE, frames[0].getHeight());
+            }
+        }
+    }
+
+    @Test
+    public void shouldLoadNumberedFramesInOrder() throws DOPOSoccerException {
+        GameCharacter korea = new GameCharacter("Corea del Sur", new BlueAuraShot());
+        assertEquals(4, SpriteLoader.characterFrames(korea, SpriteLoader.IDLE).length);
+        assertEquals(6, SpriteLoader.characterFrames(korea, SpriteLoader.RUN).length);
+        assertSame(SpriteLoader.characterFrames(korea, SpriteLoader.RUN),
+                SpriteLoader.characterFrames(korea, SpriteLoader.RUN));
+        assertEquals(0, SpriteLoader.sequence("/no/existe").length);
+    }
+
+    @Test
+    public void frameOnceShouldStopOnLastFrame() {
+        BufferedImage[] frames = SpriteLoader.split(strip(5, 8), 8);
+
+        assertSame(frames[0], SpriteLoader.frameOnce(frames, 0, 20));
+        assertSame(frames[2], SpriteLoader.frameOnce(frames, 0.1, 20));
+        assertSame(frames[4], SpriteLoader.frameOnce(frames, 3, 20));
+    }
+
+    @Test
+    public void shouldDrawCharacterWithFeetOnTheGround() {
+        BufferedImage canvas = new BufferedImage(400, 400, BufferedImage.TYPE_INT_ARGB);
+        BufferedImage frame = new BufferedImage(SpriteLoader.CELL_SIZE, SpriteLoader.CELL_SIZE,
+                BufferedImage.TYPE_INT_ARGB);
+        int red = Color.RED.getRGB();
+        for (int x = SpriteLoader.FEET_X - 4; x <= SpriteLoader.FEET_X + 4; x++) {
+            for (int y = SpriteLoader.FEET_Y - 8; y < SpriteLoader.FEET_Y; y++) {
+                frame.setRGB(x, y, red);
+            }
+        }
+        java.awt.Graphics2D g2 = canvas.createGraphics();
+
+        assertTrue(SpriteLoader.drawCharacter(g2, frame, 100, 100, 70, 120, false));
+        g2.dispose();
+
+        assertEquals(red, canvas.getRGB(135, 218));
+        assertFalse(SpriteLoader.drawCharacter(g2, null, 100, 100, 70, 120, false));
     }
 
     @Test
