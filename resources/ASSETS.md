@@ -49,6 +49,30 @@ resources/
   280 px de alto sobre el piso (y = 640); si el fondo trae arcos en otra
   posición, el balón entra donde no se ve el arco.
 
+## Balón, tiros, cancha e interfaz (ya conectados en el juego)
+
+- `sprites/ball/roll_1..6.png` y `kick_1..6.png`: balón normal. El juego usa
+  `roll_1` y lo gira según lo que rueda.
+- `sprites/shots/<tiro>/charge_N`, `fly_N`, `impact_N` (el tornado además tiene
+  `bounce_N`): `blue_aura`, `lightning`, `tornado` e `illusion`. Mientras hay un
+  tiro activo se repite `fly`; los balones falsos de la Ilusión usan los mismos
+  cuadros.
+- Cuadros del balón: de 256x256, con el balón de 96 px en el centro. El juego
+  los escala al diámetro real del balón (36).
+- `field/background.png`: cancha del partido (de `campo 2.jpeg`), a 1280x720.
+- `field/stadium.png`: fondo del menú (de `campo.jpeg`).
+- `field/goal.png`: arco de un solo lado (es el derecho; el izquierdo se
+  voltea). Se dibuja 1.4 veces más ancho que la zona de gol.
+- `ui/hud/`: `goal_banner` (al marcar) y `confetti_burst` (al ganar) están en
+  uso. `life_bar` y `power_bar` traen el relleno pintado, así que para
+  usarlas habría que tener la barra vacía. `scoreboard_panel`, `stats_board`,
+  `clock_timer_bar`, cintas e insignias están disponibles.
+- `ui/buttons/<nombre>_normal.png` y `_pressed.png`: botones (back, confirm,
+  forward, home, music, pause, play, restart, settings, sound y trophy).
+- Los JPEG originales venían con fondo magenta (balones) o blanco (arco). Se
+  recortaron quitando ese color y dividiendo cada hoja en cuadros iguales
+  (6 columnas por fila).
+
 ## Cómo se usa desde la GUI
 
 ```java
