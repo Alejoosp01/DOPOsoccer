@@ -23,6 +23,7 @@ import java.awt.geom.Path2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.geom.RoundRectangle2D;
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Random;
@@ -82,6 +83,8 @@ public final class GamePanel extends JPanel implements ActionListener {
     private final ArrayList<CrowdDot> crowd = new ArrayList<CrowdDot>();
     private final transient Set<Integer> leftKeys = new HashSet<Integer>();
     private final transient Set<Integer> rightKeys = new HashSet<Integer>();
+    private final transient PlayerAnimation leftAnimation = new PlayerAnimation(Side.LEFT);
+    private final transient PlayerAnimation rightAnimation = new PlayerAnimation(Side.RIGHT);
 
     private long lastNanos;
     private double accumulator;
@@ -392,6 +395,10 @@ public final class GamePanel extends JPanel implements ActionListener {
         }
         double frameSeconds = elapsed / 1_000_000_000.0;
         animationTime += frameSeconds;
+        if (!session.isPaused()) {
+            leftAnimation.update(session.getMatch(), frameSeconds);
+            rightAnimation.update(session.getMatch(), frameSeconds);
+        }
 
         if (session.isPaused() || session.isFinished()) {
             accumulator = 0;
@@ -622,6 +629,14 @@ public final class GamePanel extends JPanel implements ActionListener {
         g2.fillOval((int) (cx - bounds.width * 0.62), (int) (ground - 10),
                 (int) (bounds.width * 1.24), 16);
 
+        PlayerAnimation animation = left ? leftAnimation : rightAnimation;
+        BufferedImage frame = animation.currentFrame(player);
+        if (SpriteLoader.drawCharacter(g2, frame, box.getX(), box.getY(),
+                box.getWidth(), box.getHeight(), animation.isFlipped())) {
+            drawPlayerEffects(g2, player, bounds, cx, bounds.y);
+            return;
+        }
+
         double bodyWidth = bounds.width * 0.58;
         double bodyTop = bounds.y + bounds.width * 0.72;
         double bodyBottom = bounds.y + bounds.height;
@@ -677,18 +692,26 @@ public final class GamePanel extends JPanel implements ActionListener {
         g2.draw(new Arc2D.Double(cx - headRadius * 0.26, headCenterY + headRadius * 0.28,
                 headRadius * 0.52, headRadius * 0.3, 200, 140, Arc2D.OPEN));
 
+        drawPlayerEffects(g2, player, bounds, cx, headCenterY - headRadius);
+    }
+
+    /**
+     * Dibuja encima del jugador el efecto que sufre (chispas, empuje, estrellas o confusion) y el aturdimiento.
+     */
+    private void drawPlayerEffects(Graphics2D g2, Player player, Rectangle2D.Double bounds,
+                                   double cx, double topY) {
         Effect effect = player.getEffect();
         if (effect instanceof ElectrocutedEffect) {
             drawElectrocuted(g2, bounds);
         } else if (effect instanceof PushEffect) {
             drawPushed(g2, bounds, player.getVelocityX());
         } else if (effect instanceof UnconsciousEffect) {
-            drawStunStars(g2, cx, headCenterY - headRadius - 12);
+            drawStunStars(g2, cx, topY - 12);
         } else if (effect instanceof ConfusionEffect) {
-            drawConfused(g2, cx, headCenterY - headRadius - 16);
+            drawConfused(g2, cx, topY - 16);
         }
         if (player.isStunned()) {
-            drawStunStars(g2, cx, headCenterY - headRadius - 12);
+            drawStunStars(g2, cx, topY - 12);
         }
     }
 

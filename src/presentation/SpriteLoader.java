@@ -3,6 +3,7 @@ package presentation;
 import java.awt.Font;
 import java.awt.FontFormatException;
 import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
@@ -210,10 +211,16 @@ public final class SpriteLoader {
         int top = (int) Math.round(y);
         int w = (int) Math.round(width);
         int h = (int) Math.round(height);
+        Object oldInterpolation = g2.getRenderingHint(RenderingHints.KEY_INTERPOLATION);
+        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
+                RenderingHints.VALUE_INTERPOLATION_BILINEAR);
         if (flipped) {
             g2.drawImage(image, left + w, top, -w, h, null);
         } else {
             g2.drawImage(image, left, top, w, h, null);
+        }
+        if (oldInterpolation != null) {
+            g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, oldInterpolation);
         }
         return true;
     }
