@@ -71,10 +71,10 @@ java -cp "out;resources" presentation.DOPOSoccerApp
 
 ```powershell
 javac -encoding UTF-8 -cp lib/junit-platform-console-standalone-1.14.4.jar -d out (Get-ChildItem src, test -Recurse -Filter *.java | ForEach-Object { $_.FullName })
-java -jar lib/junit-platform-console-standalone-1.14.4.jar execute --class-path out --scan-class-path --details=summary
+java -jar lib/junit-platform-console-standalone-1.14.4.jar execute --class-path "out;resources" --scan-class-path --details=summary
 ```
 
-Resultado actual: **195 pruebas, 195 exitosas**.
+Resultado actual: **210 pruebas, 210 exitosas** (las de sprites necesitan `resources` en el classpath).
 
 ## Estructura
 
