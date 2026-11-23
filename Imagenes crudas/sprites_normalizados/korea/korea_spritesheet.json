@@ -1,0 +1,97 @@
+{
+  "celda": 384,
+  "ancla_pies": [
+    192,
+    340
+  ],
+  "escala_aplicada": 1.043,
+  "animaciones": {
+    "idle": {
+      "fila": 0,
+      "frames": 4,
+      "frames_originales": [
+        1,
+        2,
+        5,
+        8
+      ]
+    },
+    "run": {
+      "fila": 1,
+      "frames": 6,
+      "frames_originales": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ]
+    },
+    "jump": {
+      "fila": 2,
+      "frames": 5,
+      "frames_originales": [
+        1,
+        3,
+        4,
+        6,
+        7
+      ]
+    },
+    "kick": {
+      "fila": 3,
+      "frames": 5,
+      "frames_originales": [
+        2,
+        3,
+        6,
+        7,
+        8
+      ]
+    },
+    "header": {
+      "fila": 4,
+      "frames": 5,
+      "frames_originales": [
+        1,
+        3,
+        5,
+        6,
+        8
+      ]
+    },
+    "celebration": {
+      "fila": 5,
+      "frames": 4,
+      "frames_originales": [
+        1,
+        3,
+        5,
+        7
+      ]
+    },
+    "defeat": {
+      "fila": 6,
+      "frames": 4,
+      "frames_originales": [
+        1,
+        3,
+        5,
+        7
+      ]
+    },
+    "power": {
+      "fila": 7,
+      "frames": 6,
+      "frames_originales": [
+        1,
+        2,
+        3,
+        4,
+        7,
+        8
+      ]
+    }
+  }
+}
