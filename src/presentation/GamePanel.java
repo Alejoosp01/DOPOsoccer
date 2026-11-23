@@ -24,6 +24,7 @@ import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Random;
@@ -31,9 +32,12 @@ import java.util.Set;
 
 import javax.swing.AbstractAction;
 import javax.swing.JComponent;
+import javax.swing.JFileChooser;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.KeyStroke;
 import javax.swing.Timer;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 import domain.Ball;
 import domain.BlueAuraShot;
@@ -49,6 +53,8 @@ import domain.LightningShot;
 import domain.Match;
 import domain.MatchState;
 import domain.DOPOSoccer;
+import domain.DOPOSoccerException;
+import domain.ErrorLog;
 import domain.Player;
 import domain.PlayerController;
 import domain.PowerShot;
@@ -113,7 +119,9 @@ public final class GamePanel extends JPanel implements ActionListener {
         setBackground(UiTheme.BG_TOP);
         setFocusable(true);
 
-        session.start();
+        if (!session.isStarted()) {
+            session.start();
+        }
         Match match = session.getMatch();
         lastState = match.getState();
         lastLeftGoals = match.getScore().getLeftGoals();
@@ -175,6 +183,7 @@ public final class GamePanel extends JPanel implements ActionListener {
         bindPress(KeyEvent.VK_P, "pauseKey", this::togglePause);
         bindPress(KeyEvent.VK_M, "menu", this::goToMenu);
         bindPress(KeyEvent.VK_T, "endMatch", this::endMatch);
+        bindPress(KeyEvent.VK_G, "saveGame", this::saveGame);
         bindPress(KeyEvent.VK_R, "rematch", this::rematch);
         bindPress(KeyEvent.VK_ENTER, "rematchEnter", this::rematch);
     }
@@ -248,6 +257,46 @@ public final class GamePanel extends JPanel implements ActionListener {
     }
 
     /**
+     * Pausa el partido y lo salva en el archivo .dopo que elija el usuario.
+     */
+    private void saveGame() {
+        if (session.isFinished()) {
+            JOptionPane.showMessageDialog(this, "El partido ya termino; no hay nada que guardar.",
+                    "Guardar partida", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        if (!session.isPaused()) {
+            session.pause();
+        }
+        accumulator = 0;
+        clearInput();
+        repaint();
+        JFileChooser chooser = new JFileChooser(new File("."));
+        chooser.setDialogTitle("Guardar partida");
+        chooser.setFileFilter(new FileNameExtensionFilter("Partidas DOPOSoccer (*.dopo)", "dopo"));
+        chooser.setSelectedFile(new File("partida" + DOPOSoccer.FILE_EXTENSION));
+        if (chooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+            File file = chooser.getSelectedFile();
+            if (!file.getName().toLowerCase().endsWith(DOPOSoccer.FILE_EXTENSION)) {
+                file = new File(file.getParentFile(), file.getName() + DOPOSoccer.FILE_EXTENSION);
+            }
+            try {
+                session.save(file);
+                JOptionPane.showMessageDialog(this, "Partida guardada en:\n" + file.getAbsolutePath(),
+                        "Guardar partida", JOptionPane.INFORMATION_MESSAGE);
+            } catch (DOPOSoccerException exception) {
+                ErrorLog.record(exception);
+                JOptionPane.showMessageDialog(this, exception.getMessage() + "\n" + file.getAbsolutePath(),
+                        "No se pudo guardar", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+        clearInput();
+        lastNanos = System.nanoTime();
+        requestFocusInWindow();
+        repaint();
+    }
+
+    /**
      * Vuelve al menu principal.
      */
     private void goToMenu() {
@@ -281,6 +330,13 @@ public final class GamePanel extends JPanel implements ActionListener {
         clearInput();
         requestFocusInWindow();
         repaint();
+    }
+
+    /**
+     * Devuelve la partida que se esta jugando en este panel.
+     */
+    public DOPOSoccer getSession() {
+        return session;
     }
 
     private void rematch() {
@@ -1176,7 +1232,7 @@ public final class GamePanel extends JPanel implements ActionListener {
         g2.setFont(UiTheme.font(Font.BOLD, 17));
         g2.setColor(UiTheme.MUTED);
         drawCentered(g2, "ESC / P  continuar", VIEW_WIDTH / 2, y + 118);
-        drawCentered(g2, "T  terminar el partido      M  volver al menu", VIEW_WIDTH / 2, y + 150);
+        drawCentered(g2, "T  terminar     G  guardar partida     M  menu", VIEW_WIDTH / 2, y + 150);
         g2.setFont(UiTheme.font(Font.PLAIN, 13));
         g2.setColor(UiTheme.withAlpha(UiTheme.MUTED, 190));
         drawCentered(g2, "La partida queda exactamente donde la dejaste",

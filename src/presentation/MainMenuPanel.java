@@ -21,9 +21,11 @@ public final class MainMenuPanel extends JPanel {
 
     private final transient Runnable onPlay;
     private final transient Runnable onExit;
+    private final transient Runnable onOpen;
 
-    public MainMenuPanel(Runnable onPlay, Runnable onExit) {
+    public MainMenuPanel(Runnable onPlay, Runnable onOpen, Runnable onExit) {
         this.onPlay = onPlay;
+        this.onOpen = onOpen;
         this.onExit = onExit;
         setLayout(new BorderLayout());
         setPreferredSize(new Dimension(1280, 720));
@@ -59,6 +61,12 @@ public final class MainMenuPanel extends JPanel {
         play.setMaximumSize(new Dimension(300, 54));
         play.addActionListener(event -> onPlay.run());
 
+        MenuButton open = new MenuButton("ABRIR PARTIDA", UiTheme.PANEL_LIGHT);
+        open.setForeground(UiTheme.TEXT);
+        open.setAlignmentX(CENTER_ALIGNMENT);
+        open.setMaximumSize(new Dimension(300, 54));
+        open.addActionListener(event -> onOpen.run());
+
         MenuButton how = new MenuButton("COMO JUGAR", UiTheme.PANEL_LIGHT);
         how.setForeground(UiTheme.TEXT);
         how.setAlignmentX(CENTER_ALIGNMENT);
@@ -72,6 +80,8 @@ public final class MainMenuPanel extends JPanel {
         exit.addActionListener(event -> onExit.run());
 
         buttons.add(play);
+        buttons.add(Box.createVerticalStrut(14));
+        buttons.add(open);
         buttons.add(Box.createVerticalStrut(14));
         buttons.add(how);
         buttons.add(Box.createVerticalStrut(14));

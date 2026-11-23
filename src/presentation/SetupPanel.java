@@ -46,8 +46,8 @@ public final class SetupPanel extends JPanel {
 
     private final transient Consumer<GameSetup> onStart;
     private final transient Runnable onBack;
-    private final transient PlayerProfile player1;
-    private final transient PlayerProfile player2;
+    private transient PlayerProfile player1;
+    private transient PlayerProfile player2;
 
     private final ChoiceChip pvpOption = new ChoiceChip("Jugador vs Jugador");
     private final ChoiceChip pvmOption = new ChoiceChip("Jugador vs Maquina  (Version 2)");
@@ -270,6 +270,15 @@ public final class SetupPanel extends JPanel {
         section.add(cardRow);
         section.add(detailRow);
         return section;
+    }
+
+    /**
+     * Cambia los perfiles que se muestran (por ejemplo despues de abrir una partida guardada).
+     */
+    public void setProfiles(PlayerProfile newPlayer1, PlayerProfile newPlayer2) {
+        player1 = newPlayer1;
+        player2 = newPlayer2;
+        refreshProfiles();
     }
 
     /**
