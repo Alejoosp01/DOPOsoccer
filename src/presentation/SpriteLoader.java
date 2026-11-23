@@ -8,6 +8,7 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -39,13 +40,27 @@ public final class SpriteLoader {
     public static final String EXTENSION = ".png";
 
     public static final String IDLE = "idle";
-    public static final String WALK = "walk";
+    public static final String RUN = "run";
     public static final String JUMP = "jump";
     public static final String KICK = "kick";
-    public static final String STUNNED = "stunned";
+    public static final String HEADER = "header";
+    public static final String POWER = "power";
+    public static final String CELEBRATION = "celebration";
+    public static final String DEFEAT = "defeat";
+
+    /** Lado de cada cuadro de personaje en pixeles (los cuadros son de 384x384). */
+    public static final int CELL_SIZE = 384;
+    /** Punto del cuadro donde estan los pies del personaje, igual en todos los cuadros. */
+    public static final int FEET_X = 192;
+    public static final int FEET_Y = 340;
+    /** Alto del personaje parado dentro del cuadro; se usa para escalarlo al alto del jugador. */
+    public static final int CHARACTER_HEIGHT = 240;
+    /** Maximo de cuadros que se buscan en una secuencia numerada. */
+    public static final int MAX_SEQUENCE = 60;
 
     private static final Map<String, BufferedImage> IMAGES = new HashMap<String, BufferedImage>();
     private static final Map<String, BufferedImage[]> FRAMES = new HashMap<String, BufferedImage[]>();
+    private static final Map<String, BufferedImage[]> SEQUENCES = new HashMap<String, BufferedImage[]>();
     private static final Set<String> MISSING = new HashSet<String>();
 
     private SpriteLoader() {
@@ -95,6 +110,35 @@ public final class SpriteLoader {
     }
 
     /**
+     * Devuelve los cuadros numerados base_1.png, base_2.png, ... hasta que falte uno; vacio si no hay ninguno.
+     */
+    public static BufferedImage[] sequence(String basePath) {
+        if (basePath == null) {
+            return new BufferedImage[0];
+        }
+        if (SEQUENCES.containsKey(basePath)) {
+            return SEQUENCES.get(basePath);
+        }
+        ArrayList<BufferedImage> found = new ArrayList<BufferedImage>();
+        for (int i = 1; i <= MAX_SEQUENCE; i++) {
+            String path = basePath + "_" + i + EXTENSION;
+            if (!exists(path)) {
+                break;
+            }
+            BufferedImage image = load(path);
+            if (image != null) {
+                found.add(image);
+            }
+        }
+        if (found.isEmpty()) {
+            reportMissing(basePath + "_1" + EXTENSION);
+        }
+        BufferedImage[] result = found.toArray(new BufferedImage[found.size()]);
+        SEQUENCES.put(basePath, result);
+        return result;
+    }
+
+    /**
      * Divide una tira horizontal en cuadros del ancho indicado.
      */
     public static BufferedImage[] split(BufferedImage strip, int frameWidth) {
@@ -122,6 +166,20 @@ public final class SpriteLoader {
         }
         int index = (int) Math.floor(seconds * framesPerSecond) % frames.length;
         return frames[index];
+    }
+
+    /**
+     * Devuelve el cuadro de una animacion que se reproduce una sola vez: al acabar se queda en el ultimo.
+     */
+    public static BufferedImage frameOnce(BufferedImage[] frames, double seconds, double framesPerSecond) {
+        if (frames == null || frames.length == 0) {
+            return null;
+        }
+        if (seconds <= 0 || framesPerSecond <= 0) {
+            return frames[0];
+        }
+        int index = (int) Math.floor(seconds * framesPerSecond);
+        return frames[Math.min(index, frames.length - 1)];
     }
 
     /**
@@ -161,6 +219,25 @@ public final class SpriteLoader {
     }
 
     /**
+     * Dibuja un cuadro de personaje (384x384) con los pies en la base del cuerpo del jugador y escalado a su alto.
+     * bodyX, bodyY, bodyWidth y bodyHeight son el rectangulo del jugador en la cancha; flipped lo voltea (jugador derecho).
+     * Devuelve false si el cuadro es null, para que quien dibuja use el dibujo de respaldo.
+     */
+    public static boolean drawCharacter(Graphics2D g2, BufferedImage frame, double bodyX, double bodyY,
+                                        double bodyWidth, double bodyHeight, boolean flipped) {
+        if (g2 == null || frame == null || bodyHeight <= 0) {
+            return false;
+        }
+        double scale = bodyHeight / CHARACTER_HEIGHT;
+        double size = CELL_SIZE * scale;
+        double feetX = bodyX + bodyWidth / 2;
+        double feetY = bodyY + bodyHeight;
+        double left = feetX - FEET_X * scale;
+        double top = feetY - FEET_Y * scale;
+        return draw(g2, frame, left, top, size, size, flipped);
+    }
+
+    /**
      * Devuelve la carpeta de sprites del personaje segun su pais (korea, cameroon, nigeria o usa), o null si no se conoce.
      */
     public static String characterFolder(GameCharacter character) {
@@ -184,21 +261,21 @@ public final class SpriteLoader {
     }
 
     /**
-     * Devuelve la ruta de la tira de una accion del personaje (por ejemplo WALK), o null si no se conoce el pais.
+     * Devuelve la ruta base de los cuadros de una accion del personaje (por ejemplo ".../korea/run"), o null si no se conoce el pais.
      */
     public static String characterPath(GameCharacter character, String action) {
         String folder = characterFolder(character);
         if (folder == null || action == null) {
             return null;
         }
-        return CHARACTERS + folder + "/" + action + EXTENSION;
+        return CHARACTERS + folder + "/" + action;
     }
 
     /**
-     * Devuelve los cuadros de una accion del personaje; vacio si no hay imagen.
+     * Devuelve los cuadros de una accion del personaje (run_1.png, run_2.png, ...); vacio si no hay imagenes.
      */
     public static BufferedImage[] characterFrames(GameCharacter character, String action) {
-        return frames(characterPath(character, action));
+        return sequence(characterPath(character, action));
     }
 
     /**
@@ -240,6 +317,7 @@ public final class SpriteLoader {
     public static void clear() {
         IMAGES.clear();
         FRAMES.clear();
+        SEQUENCES.clear();
         MISSING.clear();
     }
 
