@@ -119,6 +119,14 @@ public final class MainMenuPanel extends JPanel {
         super.paintComponent(graphics);
         Graphics2D g2 = (Graphics2D) graphics.create();
         UiTheme.enableAntialiasing(g2);
+        java.awt.image.BufferedImage stadium = SpriteLoader.load(SpriteLoader.STADIUM);
+        if (stadium != null) {
+            SpriteLoader.draw(g2, stadium, 0, 0, getWidth(), getHeight(), false);
+            g2.setColor(UiTheme.withAlpha(UiTheme.BG_TOP, 150));
+            g2.fillRect(0, 0, getWidth(), getHeight());
+            g2.dispose();
+            return;
+        }
         UiTheme.paintVerticalGradient(g2, getWidth(), getHeight(),
                 UiTheme.BG_TOP, UiTheme.BG_BOTTOM);
 
