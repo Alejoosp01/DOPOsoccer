@@ -434,6 +434,13 @@ public class Player implements Serializable {
     }
 
     /**
+     * Devuelve si acaba de patear (sigue corriendo la espera entre patadas).
+     */
+    public boolean isKicking() {
+        return kickCooldown > 0;
+    }
+
+    /**
      * Devuelve el efecto que sufre ahora, o null si no tiene.
      */
     public Effect getEffect() {

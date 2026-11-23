@@ -66,3 +66,6 @@ SUSTENTACION_DOPOSoccer.md
 # Persistencia (archivos que crea el juego)
 dopo_progress.dat
 *.dopo
+
+# Comprimidos y copias (no se suben: duplican lo que ya esta en el repo)
+*.zip
