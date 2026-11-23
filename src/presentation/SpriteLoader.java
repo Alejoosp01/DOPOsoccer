@@ -17,8 +17,13 @@ import java.util.Set;
 
 import javax.imageio.ImageIO;
 
+import domain.BlueAuraShot;
 import domain.ErrorLog;
 import domain.GameCharacter;
+import domain.IllusionShot;
+import domain.LightningShot;
+import domain.PowerShot;
+import domain.TornadoShot;
 
 /**
  * Carga las imagenes y fuentes de la carpeta resources desde el classpath.
@@ -30,15 +35,31 @@ import domain.GameCharacter;
 public final class SpriteLoader {
 
     public static final String CHARACTERS = "/sprites/characters/";
-    public static final String BALL = "/sprites/ball/ball.png";
+    public static final String BALL = "/sprites/ball/";
     public static final String SHOTS = "/sprites/shots/";
     public static final String EFFECTS = "/sprites/effects/";
     public static final String FIELD = "/field/";
+    public static final String BACKGROUND = FIELD + "background.png";
+    public static final String STADIUM = FIELD + "stadium.png";
+    public static final String GOAL = FIELD + "goal.png";
     public static final String BUTTONS = "/ui/buttons/";
+    public static final String HUD = "/ui/hud/";
+    public static final String GOAL_BANNER = HUD + "goal_banner.png";
+    public static final String CONFETTI = HUD + "confetti_burst.png";
     public static final String ICONS = "/ui/icons/";
     public static final String FLAGS = "/ui/flags/";
     public static final String FONTS = "/fonts/";
     public static final String EXTENSION = ".png";
+
+    /** Filas de los cuadros del balon y de los tiros de poder. */
+    public static final String ROLL = "roll";
+    public static final String FLY = "fly";
+    public static final String CHARGE = "charge";
+    public static final String IMPACT = "impact";
+
+    /** Lado de cada cuadro del balon y de los tiros (256x256), con el balon de 96 px en el centro. */
+    public static final int BALL_FRAME_SIZE = 256;
+    public static final int BALL_DIAMETER = 96;
 
     public static final String IDLE = "idle";
     public static final String RUN = "run";
@@ -242,6 +263,63 @@ public final class SpriteLoader {
         double left = feetX - FEET_X * scale;
         double top = feetY - FEET_Y * scale;
         return draw(g2, frame, left, top, size, size, flipped);
+    }
+
+    /**
+     * Dibuja un cuadro de balon (256x256 con el balon de 96 px al centro) centrado en (centerX, centerY) con el radio
+     * del balon del juego, girado angle radianes y volteado si flipped. Devuelve false si el cuadro es null.
+     */
+    public static boolean drawBall(Graphics2D g2, BufferedImage frame, double centerX, double centerY,
+                                   double radius, boolean flipped, double angle) {
+        if (g2 == null || frame == null || radius <= 0) {
+            return false;
+        }
+        double size = BALL_FRAME_SIZE * (2 * radius / BALL_DIAMETER);
+        AffineTransform old = g2.getTransform();
+        g2.rotate(angle, centerX, centerY);
+        boolean drawn = draw(g2, frame, centerX - size / 2, centerY - size / 2, size, size, flipped);
+        g2.setTransform(old);
+        return drawn;
+    }
+
+    /**
+     * Devuelve los cuadros de una fila del balon normal (por ejemplo ROLL); vacio si no hay imagenes.
+     */
+    public static BufferedImage[] ballFrames(String row) {
+        if (row == null) {
+            return new BufferedImage[0];
+        }
+        return sequence(BALL + row);
+    }
+
+    /**
+     * Devuelve la carpeta de los cuadros de un tiro de poder (blue_aura, lightning, tornado o illusion), o null.
+     */
+    public static String shotFolder(PowerShot shot) {
+        if (shot instanceof BlueAuraShot) {
+            return "blue_aura";
+        }
+        if (shot instanceof LightningShot) {
+            return "lightning";
+        }
+        if (shot instanceof TornadoShot) {
+            return "tornado";
+        }
+        if (shot instanceof IllusionShot) {
+            return "illusion";
+        }
+        return null;
+    }
+
+    /**
+     * Devuelve los cuadros de una fila del balon con un tiro de poder (por ejemplo FLY); vacio si no hay imagenes.
+     */
+    public static BufferedImage[] shotFrames(PowerShot shot, String row) {
+        String folder = shotFolder(shot);
+        if (folder == null || row == null) {
+            return new BufferedImage[0];
+        }
+        return sequence(SHOTS + folder + "/" + row);
     }
 
     /**
