@@ -49,6 +49,7 @@ import domain.GameMode;
 import domain.Goal;
 import domain.Hitbox;
 import domain.HumanController;
+import domain.IllusionShot;
 import domain.LightningShot;
 import domain.Match;
 import domain.MatchState;
@@ -79,6 +80,10 @@ public final class GamePanel extends JPanel implements ActionListener {
     private static final int TIMER_DELAY = 16;
     private static final int STANDS_BOTTOM = 290;
     private static final int BOARDS_HEIGHT = 28;
+    /** El arco de imagen se dibuja un poco mas ancho que la zona de gol para que no se vea aplastado. */
+    private static final double GOAL_IMAGE_STRETCH = 1.4;
+    /** Cuadros por segundo de la animacion del balon con tiro de poder. */
+    private static final double SHOT_FPS = 12;
     private static final int VIEW_WIDTH = 1280;
     private static final int VIEW_HEIGHT = 720;
 
@@ -513,15 +518,26 @@ public final class GamePanel extends JPanel implements ActionListener {
         Graphics2D g2 = (Graphics2D) graphics.create();
         UiTheme.enableAntialiasing(g2);
         g2.scale(resolution.getScale(), resolution.getScale());
-        drawBackground(g2);
+        BufferedImage fieldImage = SpriteLoader.load(SpriteLoader.BACKGROUND);
+        if (fieldImage != null) {
+            SpriteLoader.draw(g2, fieldImage, 0, 0, VIEW_WIDTH, VIEW_HEIGHT, false);
+        } else {
+            drawBackground(g2);
+        }
 
         Match match = session.getMatch();
         if (match != null) {
             Field field = match.getField();
-            drawArena(g2, field);
+            if (fieldImage != null) {
+                drawHudBand(g2, field);
+            } else {
+                drawArena(g2, field);
+            }
             drawGoal(g2, field.getLeftGoal(), true);
             drawGoal(g2, field.getRightGoal(), false);
-            drawMarkings(g2, field);
+            if (fieldImage == null) {
+                drawMarkings(g2, field);
+            }
             drawPlayer(g2, match.getLeftPlayer(), match.getBall(), true);
             drawPlayer(g2, match.getRightPlayer(), match.getBall(), false);
             drawBall(g2, match.getBall());
@@ -635,7 +651,27 @@ public final class GamePanel extends JPanel implements ActionListener {
                 (int) field.getRightGoalLineX(), ground);
     }
 
+    /**
+     * Oscurece la franja bajo el piso para que el HUD se lea sobre la imagen de la cancha.
+     */
+    private void drawHudBand(Graphics2D g2, Field field) {
+        int ground = (int) field.getGroundY();
+        g2.setPaint(new GradientPaint(0, ground, UiTheme.withAlpha(UiTheme.BG_TOP, 150),
+                0, VIEW_HEIGHT, UiTheme.withAlpha(UiTheme.BG_TOP, 235)));
+        g2.fillRect(0, ground, VIEW_WIDTH, VIEW_HEIGHT - ground);
+    }
+
     private void drawGoal(Graphics2D g2, Goal goal, boolean left) {
+        BufferedImage goalImage = SpriteLoader.load(SpriteLoader.GOAL);
+        if (goalImage != null) {
+            double width = goal.getWidth() * GOAL_IMAGE_STRETCH;
+            double x = goal.getX();
+            if (left) {
+                x = goal.getRight() - width;
+            }
+            SpriteLoader.draw(g2, goalImage, x, goal.getY(), width, goal.getHeight(), left);
+            return;
+        }
         int x = (int) goal.getX();
         int y = (int) goal.getY();
         int width = (int) goal.getWidth();
@@ -877,6 +913,10 @@ public final class GamePanel extends JPanel implements ActionListener {
         g2.fillOval((int) (ball.getX() - ball.getRadius() * 1.1), (int) (ground - 7),
                 (int) (ball.getRadius() * 2.2), 11);
 
+        if (drawBallSprite(g2, ball)) {
+            return;
+        }
+
         if (ball.hasActiveShot() && ball.getDecoyCount() == 0) {
             float pulse = (float) (0.5 + 0.5 * Math.sin(animationTime * 9));
             Color glowColor = shotColor(ball.getActiveShot());
@@ -903,6 +943,49 @@ public final class GamePanel extends JPanel implements ActionListener {
         }
 
         drawBallShape(g2, ball.getX(), ball.getY(), ball.getRadius(), 255);
+    }
+
+    /**
+     * Dibuja el balon (y los balones falsos de la Ilusion) con sus imagenes. Con tiro de poder usa la animacion
+     * de ese tiro; si no, el balon normal girando segun cuanto ha rodado. Devuelve false si no hay imagenes.
+     */
+    private boolean drawBallSprite(Graphics2D g2, Ball ball) {
+        BufferedImage frame;
+        boolean flipped = ball.getVelocityX() < 0;
+        double angle = 0;
+        if (ball.hasActiveShot() || ball.getDecoyCount() > 0) {
+            PowerShot shot = ball.getActiveShot();
+            if (shot == null) {
+                shot = new IllusionShot();
+            }
+            frame = SpriteLoader.frameAt(SpriteLoader.shotFrames(shot, SpriteLoader.FLY),
+                    animationTime, SHOT_FPS);
+        } else {
+            BufferedImage[] roll = SpriteLoader.ballFrames(SpriteLoader.ROLL);
+            frame = roll.length == 0 ? null : roll[0];
+            angle = ball.getX() / ball.getRadius();
+            flipped = false;
+        }
+        if (frame == null) {
+            return false;
+        }
+        int decoys = ball.getDecoyCount();
+        double spacing = ball.getRadius() * 2.8;
+        for (int i = 0; i < decoys; i++) {
+            double offsetX;
+            double offsetY = 0;
+            if (i < 3) {
+                offsetX = -(i + 1) * spacing;
+            } else if (i < 6) {
+                offsetX = (i - 2) * spacing;
+            } else {
+                offsetX = 0;
+                offsetY = -spacing;
+            }
+            SpriteLoader.drawBall(g2, frame, ball.getX() + offsetX, ball.getY() + offsetY,
+                    ball.getRadius(), flipped, angle);
+        }
+        return SpriteLoader.drawBall(g2, frame, ball.getX(), ball.getY(), ball.getRadius(), flipped, angle);
     }
 
     /**
@@ -1201,6 +1284,22 @@ public final class GamePanel extends JPanel implements ActionListener {
         }
         Composite old = g2.getComposite();
         g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
+        BufferedImage bannerImage = SpriteLoader.load(SpriteLoader.GOAL_BANNER);
+        if (bannerImage != null) {
+            double width = 460;
+            double height = width * bannerImage.getHeight() / bannerImage.getWidth();
+            SpriteLoader.draw(g2, bannerImage, (VIEW_WIDTH - width) / 2, 130, width, height, false);
+            g2.setFont(UiTheme.font(Font.BOLD, 30));
+            String name = banner.startsWith("GOL DE ") ? banner.substring(7) : "";
+            int nameX = (VIEW_WIDTH - g2.getFontMetrics().stringWidth(name)) / 2;
+            int nameY = (int) (130 + height + 28);
+            g2.setColor(UiTheme.withAlpha(Color.BLACK, 160));
+            g2.drawString(name, nameX + 2, nameY + 2);
+            g2.setColor(Color.WHITE);
+            g2.drawString(name, nameX, nameY);
+            g2.setComposite(old);
+            return;
+        }
         g2.setFont(UiTheme.font(Font.BOLD, 62));
         FontMetrics metrics = g2.getFontMetrics();
         int x = (VIEW_WIDTH - metrics.stringWidth(banner)) / 2;
@@ -1242,6 +1341,11 @@ public final class GamePanel extends JPanel implements ActionListener {
     private void drawResultOverlay(Graphics2D g2, Match match) {
         g2.setColor(new Color(2, 6, 12, 195));
         g2.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT);
+        BufferedImage confetti = SpriteLoader.load(SpriteLoader.CONFETTI);
+        if (confetti != null && match != null && match.getWinner() != Winner.NONE) {
+            SpriteLoader.draw(g2, confetti, 120, 60, 420, 400, false);
+            SpriteLoader.draw(g2, confetti, VIEW_WIDTH - 540, 60, 420, 400, true);
+        }
 
         int width = 660;
         int height = 380;

@@ -104,6 +104,47 @@ public class SpriteLoaderTest {
     }
 
     @Test
+    public void everyPowerShotShouldHaveFlightFrames() throws DOPOSoccerException {
+        for (GameCharacter character : CharacterCatalog.createCharacters()) {
+            BufferedImage[] frames = SpriteLoader.shotFrames(character.getPowerShot(), SpriteLoader.FLY);
+            assertEquals(6, frames.length, character.getName());
+            assertEquals(SpriteLoader.BALL_FRAME_SIZE, frames[0].getWidth());
+        }
+        assertNull(SpriteLoader.shotFolder(null));
+    }
+
+    @Test
+    public void shouldLoadBallFieldAndHudImages() {
+        assertEquals(6, SpriteLoader.ballFrames(SpriteLoader.ROLL).length);
+        assertEquals(1280, SpriteLoader.load(SpriteLoader.BACKGROUND).getWidth());
+        assertEquals(720, SpriteLoader.load(SpriteLoader.BACKGROUND).getHeight());
+        assertNotNull(SpriteLoader.load(SpriteLoader.GOAL));
+        assertNotNull(SpriteLoader.load(SpriteLoader.GOAL_BANNER));
+        assertNotNull(SpriteLoader.load(SpriteLoader.CONFETTI));
+    }
+
+    @Test
+    public void shouldDrawBallCenteredWithGameRadius() {
+        BufferedImage canvas = new BufferedImage(200, 200, BufferedImage.TYPE_INT_ARGB);
+        BufferedImage frame = new BufferedImage(SpriteLoader.BALL_FRAME_SIZE, SpriteLoader.BALL_FRAME_SIZE,
+                BufferedImage.TYPE_INT_ARGB);
+        int red = Color.RED.getRGB();
+        int center = SpriteLoader.BALL_FRAME_SIZE / 2;
+        for (int x = center - 4; x <= center + 4; x++) {
+            for (int y = center - 4; y <= center + 4; y++) {
+                frame.setRGB(x, y, red);
+            }
+        }
+        java.awt.Graphics2D g2 = canvas.createGraphics();
+
+        assertTrue(SpriteLoader.drawBall(g2, frame, 100, 100, 18, false, 0.5));
+        g2.dispose();
+
+        assertEquals(red, canvas.getRGB(100, 100));
+        assertEquals(0, canvas.getRGB(160, 160));
+    }
+
+    @Test
     public void frameOnceShouldStopOnLastFrame() {
         BufferedImage[] frames = SpriteLoader.split(strip(5, 8), 8);
 
