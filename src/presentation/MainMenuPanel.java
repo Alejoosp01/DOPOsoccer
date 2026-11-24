@@ -45,7 +45,7 @@ public final class MainMenuPanel extends JPanel {
         javax.swing.JLabel title = UiTheme.label("DOPO SOCCER", UiTheme.titleFont(), UiTheme.TEXT);
         title.setAlignmentX(CENTER_ALIGNMENT);
         javax.swing.JLabel subtitle = UiTheme.label(
-                "Futbol de cabezas - Proyecto Final DOPO 2026-2",
+                "Proyecto Final DOPO 2026-2",
                 UiTheme.subtitleFont(), UiTheme.MUTED);
         subtitle.setAlignmentX(CENTER_ALIGNMENT);
         titleBlock.add(title);
@@ -98,7 +98,7 @@ public final class MainMenuPanel extends JPanel {
         JPanel footer = new JPanel(new BorderLayout());
         footer.setOpaque(false);
         javax.swing.JLabel hint = UiTheme.label(
-                "Swing + Java2D  |  5 paises  |  PvsP, PvsM y MvsM",
+                "PvsP, PvsM y MvsM",
                 UiTheme.bodyFont(), UiTheme.MUTED);
         hint.setHorizontalAlignment(SwingConstants.CENTER);
         footer.add(hint, BorderLayout.CENTER);
