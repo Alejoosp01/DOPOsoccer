@@ -303,6 +303,7 @@ public final class SetupPanel extends JPanel {
                                       DetailArea detail, Color sideColor, boolean isLeft) {
         JPanel section = new JPanel(new BorderLayout(0, 2));
         section.setOpaque(false);
+        header.setDetail(detail);
         section.add(header, BorderLayout.NORTH);
 
         JPanel cardRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
@@ -379,6 +380,7 @@ public final class SetupPanel extends JPanel {
         private final Color color;
         private final String controls;
         private String points = "";
+        private transient DetailArea detail;
 
         /**
          * Crea la cabecera con su titulo, el color del lado y el texto de controles.
@@ -421,7 +423,42 @@ public final class SetupPanel extends JPanel {
             g2.setFont(UiTheme.smallFont());
             g2.setColor(UiTheme.MUTED);
             g2.drawString(controls, 4, 40);
+            paintSummary(g2, g2.getFontMetrics().stringWidth(controls) + 24, metrics.stringWidth(points));
             g2.dispose();
+        }
+
+        /**
+         * Si el detalle lateral no cabe (pantalla pequena), dibuja nombre, tiro, dano y descripcion en el hueco libre.
+         */
+        private void paintSummary(Graphics2D g2, int left, int pointsWidth) {
+            if (detail == null || detail.getCharacter() == null || detail.getWidth() >= DetailArea.MIN_WIDTH) {
+                return;
+            }
+            int x = left + 4;
+            int width = getWidth() - pointsWidth - 24 - x;
+            if (width < 120) {
+                return;
+            }
+            PowerShot shot = detail.getCharacter().getPowerShot();
+            String first = detail.getCharacter().getName() + "  |  Tiro: " + shot.getName()
+                    + "  |  " + DetailArea.stats(shot);
+            drawFitted(g2, first, x, 18, width, Font.BOLD, 13, UiTheme.GOLD_LIGHT);
+            drawFitted(g2, UiTheme.powerDescription(shot), x, 37, width, Font.PLAIN, 12, UiTheme.MUTED);
+        }
+
+        /**
+         * Dibuja una linea reduciendo la fuente (hasta 9) hasta que quepa en el ancho dado.
+         */
+        private static void drawFitted(Graphics2D g2, String text, int x, int y, int width, int style,
+                                       int size, Color color) {
+            int fontSize = size;
+            g2.setFont(UiTheme.font(style, fontSize));
+            while (fontSize > 9 && g2.getFontMetrics().stringWidth(text) > width) {
+                fontSize--;
+                g2.setFont(UiTheme.font(style, fontSize));
+            }
+            g2.setColor(color);
+            g2.drawString(text, x, y);
         }
     }
 
@@ -430,7 +467,22 @@ public final class SetupPanel extends JPanel {
      */
     private static final class DetailArea extends JComponent {
         private static final long serialVersionUID = 1L;
+        static final int MIN_WIDTH = 180;
         private transient GameCharacter character;
+
+        /**
+         * Devuelve el personaje detallado (puede ser null).
+         */
+        GameCharacter getCharacter() {
+            return character;
+        }
+
+        /**
+         * Resume el dano y la duracion del efecto del poder en una sola linea.
+         */
+        static String stats(PowerShot shot) {
+            return "Dano " + shot.getDamage() + "  |  Efecto " + formatSeconds(shot.getEffectDuration());
+        }
 
         /**
          * Crea el area con un tamano preferido para cuatro lineas de texto.
@@ -452,7 +504,7 @@ public final class SetupPanel extends JPanel {
          */
         @Override
         protected void paintComponent(Graphics graphics) {
-            if (character == null || getWidth() < 180) {
+            if (character == null || getWidth() < MIN_WIDTH) {
                 return;
             }
             Graphics2D g2 = (Graphics2D) graphics.create();
@@ -464,8 +516,7 @@ public final class SetupPanel extends JPanel {
             UiTheme.drawShadowedText(g2, "Tiro: " + shot.getName(), 0, 40, UiTheme.GOLD_LIGHT);
             g2.setFont(UiTheme.font(Font.BOLD, 13));
             g2.setColor(UiTheme.TEXT_LIGHT);
-            g2.drawString("Dano " + shot.getDamage() + "  |  Efecto " + formatSeconds(shot.getEffectDuration()),
-                    0, 60);
+            g2.drawString(stats(shot), 0, 60);
             g2.setFont(UiTheme.font(Font.PLAIN, 12));
             g2.setColor(UiTheme.MUTED);
             FontMetrics metrics = g2.getFontMetrics();
