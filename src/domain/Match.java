@@ -362,7 +362,7 @@ public class Match implements Serializable {
             ball.getActiveShot().hit(player, owner.getKickMultiplier());
             player.clampHorizontally(field);
         }
-        ball.clearShot();
+        ball.impactShot();
     }
 
     /**

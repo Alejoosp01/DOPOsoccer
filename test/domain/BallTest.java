@@ -107,6 +107,24 @@ public class BallTest {
     }
 
     @Test
+    public void shouldCountImpactOnlyWhenShotHitsPlayer() {
+        ball.launchShot(new LightningShot(), TestData.player(true));
+        ball.impactShot();
+        assertFalse(ball.hasActiveShot());
+        assertEquals(1, ball.getShotImpactCount());
+    }
+
+    @Test
+    public void shouldNotCountImpactWhenShotIsClearedOrExpires() {
+        ball.launchShot(new LightningShot(), TestData.player(true));
+        ball.clearShot();
+        ball.launchShot(new LightningShot(), TestData.player(true));
+        ball.update(Ball.SHOT_MAX_SECONDS, field);
+        assertFalse(ball.hasActiveShot());
+        assertEquals(0, ball.getShotImpactCount());
+    }
+
+    @Test
     public void shouldRemoveDecoysWhenTimeEnds() {
         ball.startDecoys(7, 1);
         assertEquals(7, ball.getDecoyCount());

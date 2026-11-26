@@ -26,6 +26,7 @@ public class Ball implements Serializable {
     private PowerShot activeShot;
     private Player shotOwner;
     private double shotTime;
+    private int shotImpactCount;
     private int decoyCount;
     private double decoyTime;
 
@@ -263,6 +264,21 @@ public class Ball implements Serializable {
         activeShot = null;
         shotOwner = null;
         shotTime = 0;
+    }
+
+    /**
+     * Quita el tiro de poder porque golpeo a un jugador y cuenta el impacto.
+     */
+    public void impactShot() {
+        clearShot();
+        shotImpactCount++;
+    }
+
+    /**
+     * Devuelve cuantos tiros de poder han golpeado a un jugador (solo crece).
+     */
+    public int getShotImpactCount() {
+        return shotImpactCount;
     }
 
     /**

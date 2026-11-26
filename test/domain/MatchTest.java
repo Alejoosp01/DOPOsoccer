@@ -270,6 +270,7 @@ public class MatchTest {
         assertEquals(100 - 60, right.getLife(), 0.001);
         assertTrue(right.getEffect() instanceof ElectrocutedEffect);
         assertFalse(match.getBall().hasActiveShot());
+        assertEquals(1, match.getBall().getShotImpactCount());
     }
 
     @Test
