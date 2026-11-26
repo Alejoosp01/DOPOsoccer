@@ -72,6 +72,8 @@ public final class SetupPanel extends JPanel {
     private final transient ArrayList<GameCharacter> characters;
     private final ArrayList<CharacterCard> leftCards = new ArrayList<CharacterCard>();
     private final ArrayList<CharacterCard> rightCards = new ArrayList<CharacterCard>();
+    private final ArrayList<MenuButton> leftUpgrades = new ArrayList<MenuButton>();
+    private final ArrayList<MenuButton> rightUpgrades = new ArrayList<MenuButton>();
 
     private final JComboBox<String> machineProfileBox = new JComboBox<>(
             new String[] { MachineProfile.CLUMSY.getDisplayName(), MachineProfile.OFFENSIVE.getDisplayName(),
@@ -118,9 +120,9 @@ public final class SetupPanel extends JPanel {
         JPanel teams = new JPanel();
         teams.setOpaque(false);
         teams.setLayout(new BoxLayout(teams, BoxLayout.Y_AXIS));
-        teams.add(buildPlayerSection(leftTitle, leftCards, leftDetail, UiTheme.LEFT_COLOR));
+        teams.add(buildPlayerSection(leftTitle, leftCards, leftDetail, UiTheme.LEFT_COLOR, true));
         teams.add(Box.createVerticalStrut(8));
-        teams.add(buildPlayerSection(rightTitle, rightCards, rightDetail, UiTheme.RIGHT_COLOR));
+        teams.add(buildPlayerSection(rightTitle, rightCards, rightDetail, UiTheme.RIGHT_COLOR, false));
 
         steps.add(buildStep("Paso 1 de 2: Configuracion del partido", buildOptions(),
                 "VOLVER", () -> onBack.run(), "SIGUIENTE", () -> stepLayout.show(steps, STEP_TEAMS)), STEP_CONFIG);
@@ -274,10 +276,10 @@ public final class SetupPanel extends JPanel {
     }
 
     /**
-     * Crea la seccion de un jugador: titulo, fila de tarjetas y detalle del poder.
+     * Crea la seccion de un jugador: titulo, fila de tarjetas, detalle del poder y mejoras.
      */
     private JPanel buildPlayerSection(JLabel title, ArrayList<CharacterCard> cards,
-                                      JLabel detail, Color sideColor) {
+                                      JLabel detail, Color sideColor, boolean isLeft) {
         JPanel section = new JPanel();
         section.setOpaque(false);
         section.setLayout(new BoxLayout(section, BoxLayout.Y_AXIS));
@@ -306,7 +308,78 @@ public final class SetupPanel extends JPanel {
         section.add(titleRow);
         section.add(cardRow);
         section.add(detailRow);
+        section.add(buildUpgradeRow(isLeft));
         return section;
+    }
+
+    /**
+     * Crea la fila con un boton de mejora por cada estadistica del jugador indicado.
+     */
+    private JPanel buildUpgradeRow(boolean isLeft) {
+        ArrayList<MenuButton> buttons = isLeft ? leftUpgrades : rightUpgrades;
+        JPanel upgradeRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2));
+        upgradeRow.setOpaque(false);
+        upgradeRow.setMaximumSize(new Dimension(1076, 36));
+        for (StatType type : StatType.values()) {
+            MenuButton button = new MenuButton(abbreviation(type), UiTheme.PANEL_LIGHT);
+            button.setForeground(UiTheme.TEXT);
+            button.setPreferredSize(new Dimension(150, 28));
+            button.setBorder(BorderFactory.createEmptyBorder(2, 2, 2, 2));
+            button.addActionListener(event -> upgradeStat(isLeft ? player1 : player2, type));
+            buttons.add(button);
+            upgradeRow.add(button);
+        }
+        return upgradeRow;
+    }
+
+    /**
+     * Compra una mejora para el perfil; si el dominio la rechaza muestra el mensaje.
+     */
+    private void upgradeStat(PlayerProfile profile, StatType type) {
+        if (profile == null) {
+            return;
+        }
+        try {
+            profile.upgrade(type);
+        } catch (DOPOSoccerException exception) {
+            JOptionPane.showMessageDialog(this, exception.getMessage(),
+                    "No se puede mejorar", JOptionPane.WARNING_MESSAGE);
+            refreshProfiles();
+            return;
+        }
+        refreshProfiles();
+        afterUpgrade();
+    }
+
+    /**
+     * Punto de enganche que se ejecuta tras cada mejora comprada con exito.
+     */
+    private void afterUpgrade() {
+    }
+
+    /**
+     * Actualiza el texto y la disponibilidad de los botones de mejora de un perfil.
+     */
+    private void refreshUpgradeButtons(ArrayList<MenuButton> buttons, PlayerProfile profile) {
+        StatType[] types = StatType.values();
+        for (int i = 0; i < buttons.size() && i < types.length; i++) {
+            MenuButton button = buttons.get(i);
+            String abbreviation = abbreviation(types[i]);
+            if (profile == null) {
+                button.setText(abbreviation);
+                button.setEnabled(false);
+                continue;
+            }
+            int level = profile.getStats().get(types[i]);
+            if (level >= Stats.MAX) {
+                button.setText(abbreviation + " MAX");
+                button.setEnabled(false);
+            } else {
+                int cost = profile.getUpgradeCost(types[i]);
+                button.setText(abbreviation + " " + level + " (+" + cost + ")");
+                button.setEnabled(profile.getPoints() >= cost);
+            }
+        }
     }
 
     /**
@@ -326,6 +399,8 @@ public final class SetupPanel extends JPanel {
                 + profileText(player1));
         rightTitle.setText("JUGADOR 2 (DERECHA)   Flechas  +  Ctrl derecho poder      "
                 + profileText(player2));
+        refreshUpgradeButtons(leftUpgrades, player1);
+        refreshUpgradeButtons(rightUpgrades, player2);
     }
 
     /**
@@ -336,9 +411,27 @@ public final class SetupPanel extends JPanel {
             return "";
         }
         Stats stats = profile.getStats();
-        return "Puntos " + profile.getPoints() + "   |   SPD " + stats.get(StatType.SPEED)
-                + "  KCK " + stats.get(StatType.KICK) + "  JMP " + stats.get(StatType.JUMP)
-                + "  SRV " + stats.get(StatType.SURVIVAL);
+        StringBuilder text = new StringBuilder("Puntos " + profile.getPoints() + "   |  ");
+        for (StatType type : StatType.values()) {
+            text.append(' ').append(abbreviation(type)).append(' ').append(stats.get(type)).append(' ');
+        }
+        return text.toString().trim();
+    }
+
+    /**
+     * Devuelve la abreviatura de tres letras de una estadistica (SPD, KCK, JMP, SRV).
+     */
+    private String abbreviation(StatType type) {
+        switch (type) {
+            case SPEED:
+                return "SPD";
+            case KICK:
+                return "KCK";
+            case JUMP:
+                return "JMP";
+            default:
+                return "SRV";
+        }
     }
 
     /**
