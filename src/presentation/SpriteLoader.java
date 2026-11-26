@@ -82,6 +82,10 @@ public final class SpriteLoader {
     public static final String FLY = "fly";
     public static final String CHARGE = "charge";
     public static final String IMPACT = "impact";
+    /** Fila del tornado cuando rebota. */
+    public static final String BOUNCE = "bounce";
+    /** Fila del balon al ser pateado (distinta de KICK, que es la fila de los personajes). */
+    public static final String BALL_KICK = "kick";
 
     /** Lado de cada cuadro del balon y de los tiros (256x256), con el balon de 96 px en el centro. */
     public static final int BALL_FRAME_SIZE = 256;

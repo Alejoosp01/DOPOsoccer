@@ -121,6 +121,19 @@ public final class GamePanel extends JPanel implements ActionListener {
     private long lastNanos;
     private double accumulator;
     private double animationTime;
+    private double ballKickStart = Double.NaN;
+    private double shotStart = Double.NaN;
+    private double bounceStart = Double.NaN;
+    private double impactStart = Double.NaN;
+    private double impactX;
+    private double impactY;
+    private transient PowerShot impactShot;
+    private transient PowerShot lastActiveShot;
+    private boolean prevLeftKicking;
+    private boolean prevRightKicking;
+    private boolean prevShotActive;
+    private double prevVelocityY;
+    private int prevImpactCount = -1;
     private String banner;
     private long bannerUntil;
     private MatchState lastState;
@@ -574,6 +587,7 @@ public final class GamePanel extends JPanel implements ActionListener {
         }
         Score score = match.getScore();
         MatchState state = match.getState();
+        updateEffects(match, state == MatchState.GOAL && lastState != MatchState.GOAL);
 
         if (state == MatchState.GOAL && lastState != MatchState.GOAL) {
             String scorer = "";
@@ -593,6 +607,100 @@ public final class GamePanel extends JPanel implements ActionListener {
         lastState = state;
         lastLeftGoals = score.getLeftGoals();
         lastRightGoals = score.getRightGoals();
+    }
+
+    /**
+     * Detecta patadas, inicio e impacto de tiros y rebotes del tornado comparando con el cuadro anterior.
+     */
+    private void updateEffects(Match match, boolean goalScored) {
+        Ball ball = match.getBall();
+        boolean leftKicking = match.getLeftPlayer().isKicking();
+        boolean rightKicking = match.getRightPlayer().isKicking();
+        if (prevImpactCount < 0) {
+            prevImpactCount = ball.getShotImpactCount();
+        }
+        if (goalScored) {
+            clearEffects();
+        }
+        boolean shotActive = ball.hasActiveShot();
+        boolean shotStarted = shotActive && !prevShotActive;
+        if (shotStarted) {
+            shotStart = animationTime;
+        } else if (!shotActive) {
+            shotStart = Double.NaN;
+            bounceStart = Double.NaN;
+        }
+        if (ball.getShotImpactCount() > prevImpactCount && lastActiveShot != null) {
+            impactStart = animationTime;
+            impactX = ball.getX();
+            impactY = ball.getY();
+            impactShot = lastActiveShot;
+        }
+        boolean kickStarted = (leftKicking && !prevLeftKicking) || (rightKicking && !prevRightKicking);
+        double speed = Math.abs(ball.getVelocityX());
+        if (kickStarted && !shotActive && speed >= Player.KICK_SPEED * 0.5 && speed <= Player.KICK_SPEED * 1.2) {
+            ballKickStart = animationTime;
+        }
+        if (shotActive && !shotStarted && ball.getActiveShot() instanceof TornadoShot
+                && prevVelocityY > 0 && ball.getVelocityY() < 0) {
+            bounceStart = animationTime;
+        }
+        prevLeftKicking = leftKicking;
+        prevRightKicking = rightKicking;
+        prevShotActive = shotActive;
+        prevVelocityY = ball.getVelocityY();
+        prevImpactCount = ball.getShotImpactCount();
+        lastActiveShot = shotActive ? ball.getActiveShot() : null;
+    }
+
+    /**
+     * Apaga todos los efectos visuales de balon y tiros (por ejemplo tras un gol).
+     */
+    private void clearEffects() {
+        ballKickStart = Double.NaN;
+        shotStart = Double.NaN;
+        bounceStart = Double.NaN;
+        impactStart = Double.NaN;
+        impactShot = null;
+        lastActiveShot = null;
+    }
+
+    /**
+     * Devuelve el cuadro de un efecto que empezo en start, o null si no hay efecto, no hay cuadros o ya termino.
+     */
+    private BufferedImage effectFrame(BufferedImage[] frames, double start) {
+        if (Double.isNaN(start) || frames == null || frames.length == 0) {
+            return null;
+        }
+        double elapsed = animationTime - start;
+        if (elapsed >= frames.length / SHOT_FPS) {
+            return null;
+        }
+        return SpriteLoader.frameOnce(frames, elapsed, SHOT_FPS);
+    }
+
+    /**
+     * Devuelve el cuadro del balon con tiro: rebote del tornado, carga al iniciar o vuelo.
+     */
+    private BufferedImage shotSpriteFrame(PowerShot shot) {
+        BufferedImage frame = effectFrame(SpriteLoader.shotFrames(shot, SpriteLoader.BOUNCE), bounceStart);
+        if (frame == null) {
+            frame = effectFrame(SpriteLoader.shotFrames(shot, SpriteLoader.CHARGE), shotStart);
+        }
+        if (frame == null) {
+            frame = SpriteLoader.frameAt(SpriteLoader.shotFrames(shot, SpriteLoader.FLY), animationTime, SHOT_FPS);
+        }
+        return frame;
+    }
+
+    /**
+     * Dibuja la animacion de impacto del ultimo tiro en el punto donde golpeo, si sigue vigente.
+     */
+    private void drawShotImpact(Graphics2D g2, Ball ball) {
+        BufferedImage frame = effectFrame(SpriteLoader.shotFrames(impactShot, SpriteLoader.IMPACT), impactStart);
+        if (frame != null) {
+            SpriteLoader.drawBall(g2, frame, impactX, impactY, ball.getRadius(), false, 0);
+        }
     }
 
     @Override
@@ -624,6 +732,7 @@ public final class GamePanel extends JPanel implements ActionListener {
             drawPlayer(g2, match.getLeftPlayer(), match.getBall(), true);
             drawPlayer(g2, match.getRightPlayer(), match.getBall(), false);
             drawBall(g2, match.getBall());
+            drawShotImpact(g2, match.getBall());
             drawHud(g2, match);
             if (!session.isPaused() && !session.isFinished()) {
                 pauseButton.draw(g2, resolution.getScale());
@@ -1044,12 +1153,14 @@ public final class GamePanel extends JPanel implements ActionListener {
             if (shot == null) {
                 shot = new IllusionShot();
             }
-            frame = SpriteLoader.frameAt(SpriteLoader.shotFrames(shot, SpriteLoader.FLY),
-                    animationTime, SHOT_FPS);
+            frame = shotSpriteFrame(shot);
         } else {
-            BufferedImage[] roll = SpriteLoader.ballFrames(SpriteLoader.ROLL);
-            frame = roll.length == 0 ? null : roll[0];
-            angle = ball.getX() / ball.getRadius();
+            frame = effectFrame(SpriteLoader.ballFrames(SpriteLoader.BALL_KICK), ballKickStart);
+            if (frame == null) {
+                BufferedImage[] roll = SpriteLoader.ballFrames(SpriteLoader.ROLL);
+                frame = roll.length == 0 ? null : roll[0];
+                angle = ball.getX() / ball.getRadius();
+            }
             flipped = false;
         }
         if (frame == null) {
