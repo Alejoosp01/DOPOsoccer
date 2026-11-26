@@ -17,6 +17,8 @@ import java.awt.event.ActionListener;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.geom.Arc2D;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Path2D;
@@ -106,6 +108,12 @@ public final class GamePanel extends JPanel implements ActionListener {
     private int lastLeftGoals;
     private int lastRightGoals;
     private final Resolution resolution;
+    private final transient HudButton pauseButton = new HudButton(SpriteLoader.BUTTON_PAUSE, "PAUSA", this::togglePause);
+    private final transient HudButton resumeButton = new HudButton(SpriteLoader.BUTTON_PAUSE, "SEGUIR", this::togglePause);
+    private final transient HudButton pauseHomeButton = new HudButton(SpriteLoader.BUTTON_HOME, "MENU", this::goToMenu);
+    private final transient HudButton restartButton = new HudButton(SpriteLoader.BUTTON_RESTART, "REVANCHA", this::rematch);
+    private final transient HudButton resultHomeButton = new HudButton(SpriteLoader.BUTTON_HOME, "MENU", this::goToMenu);
+    private final transient HudButton trophyIcon = new HudButton(SpriteLoader.BUTTON_TROPHY, "", null);
 
     public GamePanel(DOPOSoccer session, Runnable onMenu, Runnable onRematch, Resolution resolution) {
         if (session == null) {
@@ -134,6 +142,7 @@ public final class GamePanel extends JPanel implements ActionListener {
 
         generateCrowd();
         installKeyBindings();
+        installHudButtons();
         timer = new Timer(TIMER_DELAY, this);
         timer.setCoalesce(true);
         lastNanos = System.nanoTime();
@@ -191,6 +200,61 @@ public final class GamePanel extends JPanel implements ActionListener {
         bindPress(KeyEvent.VK_G, "saveGame", this::saveGame);
         bindPress(KeyEvent.VK_R, "rematch", this::rematch);
         bindPress(KeyEvent.VK_ENTER, "rematchEnter", this::rematch);
+    }
+
+    /**
+     * Define la posicion de los botones del HUD (coordenadas logicas) y conecta el raton.
+     */
+    private void installHudButtons() {
+        pauseButton.setBounds(VIEW_WIDTH - 76, 16, 52, 52);
+        resumeButton.setBounds(VIEW_WIDTH / 2 - 76, 400, 64, 64);
+        pauseHomeButton.setBounds(VIEW_WIDTH / 2 + 12, 400, 64, 64);
+        restartButton.setBounds(VIEW_WIDTH / 2 - 76, 450, 64, 64);
+        resultHomeButton.setBounds(VIEW_WIDTH / 2 + 12, 450, 64, 64);
+        addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent event) {
+                requestFocusInWindow();
+                double px = event.getX() / resolution.getScale();
+                double py = event.getY() / resolution.getScale();
+                for (HudButton button : activeButtons()) {
+                    if (button.press(px, py)) {
+                        repaint();
+                        return;
+                    }
+                }
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent event) {
+                double px = event.getX() / resolution.getScale();
+                double py = event.getY() / resolution.getScale();
+                java.util.List<HudButton> active = activeButtons();
+                HudButton[] all = {pauseButton, resumeButton, pauseHomeButton, restartButton, resultHomeButton};
+                for (HudButton button : all) {
+                    if (active.contains(button)) {
+                        button.release(px, py);
+                    } else {
+                        button.cancel();
+                    }
+                }
+                requestFocusInWindow();
+                repaint();
+            }
+        });
+    }
+
+    /**
+     * Devuelve los botones del HUD visibles segun el estado de la partida.
+     */
+    private java.util.List<HudButton> activeButtons() {
+        if (session.isFinished()) {
+            return java.util.Arrays.asList(restartButton, resultHomeButton);
+        }
+        if (session.isPaused()) {
+            return java.util.Arrays.asList(resumeButton, pauseHomeButton);
+        }
+        return java.util.Arrays.asList(pauseButton);
     }
 
     /**
@@ -542,6 +606,9 @@ public final class GamePanel extends JPanel implements ActionListener {
             drawPlayer(g2, match.getRightPlayer(), match.getBall(), false);
             drawBall(g2, match.getBall());
             drawHud(g2, match);
+            if (!session.isPaused() && !session.isFinished()) {
+                pauseButton.draw(g2, resolution.getScale());
+            }
         }
 
         drawBanner(g2);
@@ -1316,7 +1383,7 @@ public final class GamePanel extends JPanel implements ActionListener {
         g2.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT);
 
         int width = 520;
-        int height = 230;
+        int height = 300;
         int x = (VIEW_WIDTH - width) / 2;
         int y = (VIEW_HEIGHT - height) / 2;
         g2.setColor(UiTheme.withAlpha(UiTheme.PANEL, 245));
@@ -1335,7 +1402,9 @@ public final class GamePanel extends JPanel implements ActionListener {
         g2.setFont(UiTheme.font(Font.PLAIN, 13));
         g2.setColor(UiTheme.withAlpha(UiTheme.MUTED, 190));
         drawCentered(g2, "La partida queda exactamente donde la dejaste",
-                VIEW_WIDTH / 2, y + 190);
+                VIEW_WIDTH / 2, y + 282);
+        resumeButton.draw(g2, resolution.getScale());
+        pauseHomeButton.draw(g2, resolution.getScale());
     }
 
     private void drawResultOverlay(Graphics2D g2, Match match) {
@@ -1348,7 +1417,7 @@ public final class GamePanel extends JPanel implements ActionListener {
         }
 
         int width = 660;
-        int height = 380;
+        int height = 440;
         int x = (VIEW_WIDTH - width) / 2;
         int y = (VIEW_HEIGHT - height) / 2;
         g2.setColor(UiTheme.withAlpha(UiTheme.PANEL, 248));
@@ -1372,6 +1441,10 @@ public final class GamePanel extends JPanel implements ActionListener {
         g2.setFont(UiTheme.font(Font.BOLD, 40));
         g2.setColor(UiTheme.TEXT);
         drawCentered(g2, resultTitle(), VIEW_WIDTH / 2, y + 112);
+        // Trofeo decorativo a la izquierda del titulo (sin accion)
+        int titleHalf = g2.getFontMetrics().stringWidth(resultTitle()) / 2;
+        trophyIcon.setBounds(VIEW_WIDTH / 2 - titleHalf - 60, y + 70, 48, 48);
+        trophyIcon.draw(g2, resolution.getScale());
 
         if (match != null) {
             g2.setFont(UiTheme.font(Font.BOLD, 56));
@@ -1393,11 +1466,13 @@ public final class GamePanel extends JPanel implements ActionListener {
 
         g2.setFont(UiTheme.font(Font.BOLD, 16));
         g2.setColor(UiTheme.TEXT);
-        drawCentered(g2, "R / ENTER  revancha          M  menu", VIEW_WIDTH / 2, y + 326);
+        drawCentered(g2, "R / ENTER  revancha          M  menu", VIEW_WIDTH / 2, y + 400);
+        restartButton.draw(g2, resolution.getScale());
+        resultHomeButton.draw(g2, resolution.getScale());
         g2.setFont(UiTheme.font(Font.PLAIN, 12));
         g2.setColor(UiTheme.withAlpha(UiTheme.MUTED, 180));
         drawCentered(g2, "La revancha conserva la misma configuracion",
-                VIEW_WIDTH / 2, y + 350);
+                VIEW_WIDTH / 2, y + 424);
     }
 
     /**
