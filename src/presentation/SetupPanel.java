@@ -123,20 +123,17 @@ public final class SetupPanel extends JPanel {
      */
     private void buildInterface() {
         steps.setOpaque(false);
-        JPanel teams = new JPanel();
+        JPanel teams = new JPanel(new GridLayout(1, 2, 12, 0));
         teams.setOpaque(false);
-        teams.setLayout(new BoxLayout(teams, BoxLayout.Y_AXIS));
-        teams.setBorder(BorderFactory.createEmptyBorder(0, 24, 0, 24));
         teams.add(buildPlayerSection(leftHeader, leftCards, leftDetail, UiTheme.LEFT_COLOR, true));
-        teams.add(Box.createVerticalStrut(10));
         teams.add(buildPlayerSection(rightHeader, rightCards, rightDetail, UiTheme.RIGHT_COLOR, false));
 
         steps.add(buildStep("Paso 1 de 2: Configuracion del partido", buildOptions(),
                 SpriteLoader.BUTTON_BACK, "VOLVER", () -> { saveProgress(); onBack.run(); },
-                SpriteLoader.BUTTON_FORWARD, "SIGUIENTE", () -> stepLayout.show(steps, STEP_TEAMS)), STEP_CONFIG);
+                SpriteLoader.BUTTON_FORWARD, "SIGUIENTE", () -> stepLayout.show(steps, STEP_TEAMS), 900), STEP_CONFIG);
         steps.add(buildStep("Paso 2 de 2: Seleccion de equipos", teams,
                 SpriteLoader.BUTTON_BACK, "ATRAS", () -> { saveProgress(); showFirstStep(); },
-                SpriteLoader.BUTTON_PLAY, "COMENZAR", () -> startGame()), STEP_TEAMS);
+                SpriteLoader.BUTTON_PLAY, "COMENZAR", () -> startGame(), 1100), STEP_TEAMS);
         add(steps, BorderLayout.CENTER);
 
         selectCard(leftCards, 0);
@@ -153,10 +150,10 @@ public final class SetupPanel extends JPanel {
     }
 
     /**
-     * Crea un paso con titulo, contenido central y dos botones inferiores.
+     * Crea un paso: un panel central de ancho limitado, centrado en la pantalla, con titulo, contenido y botones.
      */
     private JPanel buildStep(String titleText, JPanel body, String leftImage, String leftText, Runnable leftAction,
-                             String rightImage, String rightText, Runnable rightAction) {
+                             String rightImage, String rightText, Runnable rightAction, int maxWidth) {
         JPanel step = new JPanel(new BorderLayout());
         step.setOpaque(false);
         JPanel header = new JPanel();
@@ -179,7 +176,65 @@ public final class SetupPanel extends JPanel {
         footer.add(left);
         footer.add(right);
         step.add(footer, BorderLayout.SOUTH);
-        return step;
+        return new CenterHost(new ContentPanel(step), maxWidth);
+    }
+
+    /**
+     * Contenedor que centra su unico hijo en horizontal y vertical con un ancho maximo y margenes uniformes.
+     */
+    private static final class CenterHost extends JPanel {
+        private static final long serialVersionUID = 1L;
+        private final int maxWidth;
+        private static final int MARGIN = 12;
+        private final JComponent child;
+
+        /**
+         * Crea el contenedor transparente con el hijo a centrar y su ancho maximo.
+         */
+        CenterHost(JComponent child, int maxWidth) {
+            super(null);
+            this.maxWidth = maxWidth;
+            this.child = child;
+            setOpaque(false);
+            add(child);
+        }
+
+        /**
+         * Coloca el hijo centrado, con su alto preferido recortado al espacio disponible.
+         */
+        @Override
+        public void doLayout() {
+            int width = Math.min(maxWidth, getWidth() - 2 * MARGIN);
+            int height = Math.min(child.getPreferredSize().height, getHeight() - 2 * MARGIN);
+            child.setBounds((getWidth() - width) / 2, (getHeight() - height) / 2, width, height);
+        }
+    }
+
+    /**
+     * Panel central de un paso, pintado con el estilo del tema.
+     */
+    private static final class ContentPanel extends JPanel {
+        private static final long serialVersionUID = 1L;
+
+        /**
+         * Crea el panel transparente que envuelve el contenido del paso.
+         */
+        ContentPanel(JPanel content) {
+            super(new BorderLayout());
+            setOpaque(false);
+            setBorder(BorderFactory.createEmptyBorder(8, 10, 8, 10));
+            add(content, BorderLayout.CENTER);
+        }
+
+        /**
+         * Pinta el fondo del panel con UiTheme.paintPanel.
+         */
+        @Override
+        protected void paintComponent(Graphics graphics) {
+            Graphics2D g2 = (Graphics2D) graphics.create();
+            UiTheme.paintPanel(g2, 0, 0, getWidth(), getHeight(), 22, 4);
+            g2.dispose();
+        }
     }
 
     /**
@@ -249,7 +304,8 @@ public final class SetupPanel extends JPanel {
         addOptionRow(options, 2, ruleLabel, valueRow);
         addOptionRow(options, 3, UiTheme.label("Resolucion", UiTheme.subtitleFont(), UiTheme.TEXT), resolutionRow);
 
-        JPanel wrapper = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        JPanel wrapper = new JPanel(new GridBagLayout());
+        wrapper.setBorder(BorderFactory.createEmptyBorder(8, 0, 8, 0));
         wrapper.setOpaque(false);
         wrapper.add(options);
         return wrapper;
@@ -287,9 +343,9 @@ public final class SetupPanel extends JPanel {
         fieldConstraints.gridy = row;
         fieldConstraints.anchor = GridBagConstraints.LINE_START;
         fieldConstraints.insets = new Insets(4, 0, 4, 0);
-        label.setPreferredSize(new Dimension(180, 38));
+        label.setPreferredSize(new Dimension(170, 38));
         label.setHorizontalAlignment(JLabel.RIGHT);
-        field.setPreferredSize(new Dimension(720, 38));
+        field.setPreferredSize(new Dimension(560, 38));
         options.add(label, labelConstraints);
         options.add(field, fieldConstraints);
     }
@@ -304,7 +360,7 @@ public final class SetupPanel extends JPanel {
         header.setDetail(detail);
         section.add(header, BorderLayout.NORTH);
 
-        JPanel cardRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        JPanel cardRow = new JPanel(new GridLayout(1, Math.max(1, characters.size()), 4, 0));
         cardRow.setOpaque(false);
         ButtonGroup group = new ButtonGroup();
         for (GameCharacter character : characters) {
@@ -315,12 +371,11 @@ public final class SetupPanel extends JPanel {
             cardRow.add(card);
         }
 
-        JPanel body = new JPanel(new BorderLayout(4, 0));
+        JPanel body = new JPanel(new BorderLayout(0, 6));
         body.setOpaque(false);
-        body.add(cardRow, BorderLayout.WEST);
+        body.add(cardRow, BorderLayout.NORTH);
         body.add(buildSidePanel(detail, isLeft), BorderLayout.CENTER);
         section.add(body, BorderLayout.CENTER);
-        section.setMaximumSize(new Dimension(Integer.MAX_VALUE, 48 + CharacterCard.HEIGHT));
         return section;
     }
 
@@ -332,7 +387,7 @@ public final class SetupPanel extends JPanel {
         SidePanel side = new SidePanel();
         JPanel upgrades = new JPanel(new GridLayout(StatType.values().length, 1, 0, 2));
         upgrades.setOpaque(false);
-        upgrades.setPreferredSize(new Dimension(250, 120));
+        upgrades.setPreferredSize(new Dimension(232, 120));
         for (StatType type : StatType.values()) {
             UpgradeRow row = new UpgradeRow(type, isLeft);
             rows.add(row);
@@ -344,7 +399,7 @@ public final class SetupPanel extends JPanel {
     }
 
     /**
-     * Panel a la derecha de la fila de tarjetas, pintado con el estilo azul marino y naranja del tema.
+     * Panel bajo la fila de tarjetas, pintado con el estilo azul marino y naranja del tema.
      */
     private static final class SidePanel extends JPanel {
         private static final long serialVersionUID = 1L;
@@ -353,13 +408,13 @@ public final class SetupPanel extends JPanel {
          * Crea el panel transparente con margenes interiores para el contenido.
          */
         SidePanel() {
-            super(new BorderLayout(16, 0));
+            super(new BorderLayout(8, 0));
             setOpaque(false);
-            setBorder(BorderFactory.createEmptyBorder(12, 18, 12, 18));
+            setBorder(BorderFactory.createEmptyBorder(10, 12, 10, 12));
         }
 
         /**
-         * Pinta el fondo con UiTheme.paintPanel (el 9-slice del tablero se deforma a este tamano).
+         * Pinta el fondo con UiTheme.paintPanel, dibujado con Java2D a cualquier tamano.
          */
         @Override
         protected void paintComponent(Graphics graphics) {
@@ -465,7 +520,7 @@ public final class SetupPanel extends JPanel {
      */
     private static final class DetailArea extends JComponent {
         private static final long serialVersionUID = 1L;
-        static final int MIN_WIDTH = 180;
+        static final int MIN_WIDTH = 150;
         private transient GameCharacter character;
 
         /**
@@ -578,8 +633,8 @@ public final class SetupPanel extends JPanel {
             setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
             JLabel name = UiTheme.label(abbreviation(type), UiTheme.font(Font.BOLD, 15), UiTheme.TEXT_LIGHT);
             fixWidth(name, 44);
-            fixWidth(levelLabel, 92);
-            fixWidth(costLabel, 70);
+            fixWidth(levelLabel, 78);
+            fixWidth(costLabel, 76);
             button = new ImageButton(SpriteLoader.BUTTON_CONFIRM, "+", UiTheme.PANEL_LIGHT, false);
             button.setPreferredSize(new Dimension(30, 30));
             button.setToolTipText("Mejorar " + abbreviation(type));
