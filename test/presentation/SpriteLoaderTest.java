@@ -34,6 +34,26 @@ public class SpriteLoaderTest {
     }
 
     @Test
+    public void shouldCacheScaledImageWithRequestedSize() {
+        String path = SpriteLoader.BUTTONS + "play_normal" + SpriteLoader.EXTENSION;
+        org.junit.jupiter.api.Assumptions.assumeTrue(SpriteLoader.exists(path));
+        BufferedImage first = SpriteLoader.scaled(path, 40, 30);
+        assertNotNull(first);
+        assertEquals(40, first.getWidth());
+        assertEquals(30, first.getHeight());
+        assertSame(first, SpriteLoader.scaled(path, 40, 30));
+        assertNotSame(first, SpriteLoader.scaled(path, 41, 30));
+    }
+
+    @Test
+    public void shouldReturnNullForInvalidScaledImage() {
+        assertNull(SpriteLoader.scaled("/no/existe.png", 10, 10));
+        String path = SpriteLoader.BUTTONS + "play_normal" + SpriteLoader.EXTENSION;
+        assertNull(SpriteLoader.scaled(path, 0, 10));
+        assertNull(SpriteLoader.scaled(path, 10, -1));
+    }
+
+    @Test
     public void shouldReturnNoFramesForMissingStrip() {
         assertEquals(0, SpriteLoader.frames("/no/existe.png").length);
     }

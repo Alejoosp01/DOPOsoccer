@@ -46,10 +46,36 @@ public final class SpriteLoader {
     public static final String HUD = "/ui/hud/";
     public static final String GOAL_BANNER = HUD + "goal_banner.png";
     public static final String CONFETTI = HUD + "confetti_burst.png";
+    public static final String EXTENSION = ".png";
+    public static final String SCOREBOARD_PANEL = HUD + "scoreboard_panel" + EXTENSION;
+    public static final String CLOCK_TIMER_BAR = HUD + "clock_timer_bar" + EXTENSION;
+    public static final String LIFE_BAR = HUD + "life_bar" + EXTENSION;
+    public static final String POWER_BAR = HUD + "power_bar" + EXTENSION;
+    public static final String RIBBON_BLUE = HUD + "ribbon_blue" + EXTENSION;
+    public static final String RIBBON_RED = HUD + "ribbon_red" + EXTENSION;
+    public static final String BADGE_FIRE = HUD + "badge_fire" + EXTENSION;
+    public static final String BADGE_BOLT = HUD + "badge_bolt" + EXTENSION;
+    public static final String BADGE_SHIELD = HUD + "badge_shield" + EXTENSION;
+    public static final String STATS_BOARD = HUD + "stats_board" + EXTENSION;
+
+    /** Nombres de los botones con imagen (archivos {@code nombre_normal.png} y {@code nombre_pressed.png}). */
+    public static final String BUTTON_BACK = "back";
+    public static final String BUTTON_CONFIRM = "confirm";
+    public static final String BUTTON_FORWARD = "forward";
+    public static final String BUTTON_HOME = "home";
+    public static final String BUTTON_MUSIC_OFF = "music_off";
+    public static final String BUTTON_MUSIC_ON = "music_on";
+    public static final String BUTTON_PAUSE = "pause";
+    public static final String BUTTON_PLAY = "play";
+    public static final String BUTTON_RESTART = "restart";
+    public static final String BUTTON_SETTINGS = "settings";
+    public static final String BUTTON_SOUND_OFF = "sound_off";
+    public static final String BUTTON_SOUND_ON = "sound_on";
+    public static final String BUTTON_TROPHY = "trophy";
+
     public static final String ICONS = "/ui/icons/";
     public static final String FLAGS = "/ui/flags/";
     public static final String FONTS = "/fonts/";
-    public static final String EXTENSION = ".png";
 
     /** Filas de los cuadros del balon y de los tiros de poder. */
     public static final String ROLL = "roll";
@@ -84,8 +110,49 @@ public final class SpriteLoader {
     private static final Map<String, BufferedImage[]> FRAMES = new HashMap<String, BufferedImage[]>();
     private static final Map<String, BufferedImage[]> SEQUENCES = new HashMap<String, BufferedImage[]>();
     private static final Set<String> MISSING = new HashSet<String>();
+    private static final Map<String, BufferedImage> SCALED = new HashMap<String, BufferedImage>();
 
     private SpriteLoader() {
+    }
+
+    /**
+     * Devuelve la imagen normal del boton con ese nombre, o null si no existe.
+     */
+    public static BufferedImage buttonNormal(String name) {
+        return load(BUTTONS + name + "_normal" + EXTENSION);
+    }
+
+    /**
+     * Devuelve la imagen presionada del boton con ese nombre, o null si no existe.
+     */
+    public static BufferedImage buttonPressed(String name) {
+        return load(BUTTONS + name + "_pressed" + EXTENSION);
+    }
+
+    /**
+     * Devuelve la imagen de la ruta escalada al tamaño dado; se escala una sola vez y se guarda en cache.
+     */
+    public static BufferedImage scaled(String path, int width, int height) {
+        if (width <= 0 || height <= 0) {
+            return null;
+        }
+        BufferedImage source = load(path);
+        if (source == null) {
+            return null;
+        }
+        String key = path + "@" + width + "x" + height;
+        BufferedImage result = SCALED.get(key);
+        if (result == null) {
+            result = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+            Graphics2D g2 = result.createGraphics();
+            g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+            g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.drawImage(source, 0, 0, width, height, null);
+            g2.dispose();
+            SCALED.put(key, result);
+        }
+        return result;
     }
 
     /**
@@ -403,6 +470,7 @@ public final class SpriteLoader {
         IMAGES.clear();
         FRAMES.clear();
         SEQUENCES.clear();
+        SCALED.clear();
         MISSING.clear();
     }
 
