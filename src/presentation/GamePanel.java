@@ -86,6 +86,12 @@ public final class GamePanel extends JPanel implements ActionListener {
     private static final double GOAL_IMAGE_STRETCH = 1.4;
     /** Cuadros por segundo de la animacion del balon con tiro de poder. */
     private static final double SHOT_FPS = 12;
+    /** Ancho logico del recuadro de resultado. */
+    private static final int RESULT_BOARD_W = 660;
+    /** Alto logico del recuadro de resultado, con la proporcion del tablero. */
+    private static final int RESULT_BOARD_H = 478;
+    /** Posicion Y logica de los botones del resultado. */
+    private static final int RESULT_BUTTONS_Y = 403;
     private static final int VIEW_WIDTH = 1280;
     private static final int BOARD_W = 260;
     private static final int BOARD_H = 120;
@@ -222,8 +228,8 @@ public final class GamePanel extends JPanel implements ActionListener {
         pauseButton.setBounds(VIEW_WIDTH - 76, 16, 52, 52);
         resumeButton.setBounds(VIEW_WIDTH / 2 - 76, 400, 64, 64);
         pauseHomeButton.setBounds(VIEW_WIDTH / 2 + 12, 400, 64, 64);
-        restartButton.setBounds(VIEW_WIDTH / 2 - 76, 450, 64, 64);
-        resultHomeButton.setBounds(VIEW_WIDTH / 2 + 12, 450, 64, 64);
+        restartButton.setBounds(VIEW_WIDTH / 2 - 76, RESULT_BUTTONS_Y, 64, 64);
+        resultHomeButton.setBounds(VIEW_WIDTH / 2 + 12, RESULT_BUTTONS_Y, 64, 64);
         addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent event) {
@@ -1590,17 +1596,16 @@ public final class GamePanel extends JPanel implements ActionListener {
             SpriteLoader.draw(g2, confetti, VIEW_WIDTH - 540, 60, 420, 400, true);
         }
 
-        int width = 660;
-        int height = 440;
+        int width = RESULT_BOARD_W;
+        int height = RESULT_BOARD_H;
         int x = (VIEW_WIDTH - width) / 2;
         int y = (VIEW_HEIGHT - height) / 2;
-        g2.setColor(UiTheme.withAlpha(UiTheme.PANEL, 248));
-        g2.fill(new RoundRectangle2D.Double(x, y, width, height, 30, 30));
-        g2.setColor(UiTheme.withAlpha(UiTheme.BORDER, 240));
-        g2.setStroke(new BasicStroke(2f));
-        g2.draw(new RoundRectangle2D.Double(x, y, width, height, 30, 30));
-        g2.setColor(UiTheme.withAlpha(UiTheme.GOLD, 200));
-        g2.fill(new RoundRectangle2D.Double(x + width * 0.3, y + 20, width * 0.4, 4, 4, 4));
+        BufferedImage board = SpriteLoader.scaled(SpriteLoader.STATS_BOARD, width, height);
+        if (board != null) {
+            g2.drawImage(board, x, y, null);
+        } else {
+            drawResultBoxFallback(g2, x, y, width, height);
+        }
 
         String header = "PARTIDO TERMINADO";
         if (session.getWinner() == Winner.LEFT) {
@@ -1610,43 +1615,57 @@ public final class GamePanel extends JPanel implements ActionListener {
         }
         g2.setFont(UiTheme.font(Font.BOLD, 14));
         g2.setColor(UiTheme.GOLD);
-        drawCentered(g2, header, VIEW_WIDTH / 2, y + 58);
+        drawCentered(g2, header, VIEW_WIDTH / 2, y + 124);
 
         g2.setFont(UiTheme.font(Font.BOLD, 40));
         g2.setColor(UiTheme.TEXT);
-        drawCentered(g2, resultTitle(), VIEW_WIDTH / 2, y + 112);
+        drawCentered(g2, resultTitle(), VIEW_WIDTH / 2, y + 162);
         // Trofeo decorativo a la izquierda del titulo (sin accion)
         int titleHalf = g2.getFontMetrics().stringWidth(resultTitle()) / 2;
-        trophyIcon.setBounds(VIEW_WIDTH / 2 - titleHalf - 60, y + 70, 48, 48);
+        trophyIcon.setBounds(VIEW_WIDTH / 2 - titleHalf - 60, y + 120, 48, 48);
         trophyIcon.draw(g2, resolution.getScale());
 
         if (match != null) {
             g2.setFont(UiTheme.font(Font.BOLD, 56));
             g2.setColor(UiTheme.GOLD);
             drawCentered(g2, match.getScore().getLeftGoals() + "  -  "
-                    + match.getScore().getRightGoals(), VIEW_WIDTH / 2, y + 182);
+                    + match.getScore().getRightGoals(), VIEW_WIDTH / 2, y + 218);
         }
 
         g2.setFont(UiTheme.font(Font.BOLD, 17));
         g2.setColor(UiTheme.MUTED);
         drawCentered(g2, session.getLeftCharacter().getName() + "  vs  "
-                + session.getRightCharacter().getName(), VIEW_WIDTH / 2, y + 228);
+                + session.getRightCharacter().getName(), VIEW_WIDTH / 2, y + 245);
         g2.setColor(UiTheme.GOLD);
+        g2.setFont(UiTheme.font(Font.BOLD, 13));
         drawCentered(g2, session.getLeftProfile().getName() + "  +" + session.getPointsEarned(Side.LEFT)
                 + " puntos (total " + session.getLeftProfile().getPoints() + ")      "
                 + session.getRightProfile().getName() + "  +" + session.getPointsEarned(Side.RIGHT)
                 + " puntos (total " + session.getRightProfile().getPoints() + ")",
-                VIEW_WIDTH / 2, y + 260);
+                VIEW_WIDTH / 2, y + 268);
 
         g2.setFont(UiTheme.font(Font.BOLD, 16));
         g2.setColor(UiTheme.TEXT);
-        drawCentered(g2, "R / ENTER  revancha          M  menu", VIEW_WIDTH / 2, y + 400);
+        drawCentered(g2, "R / ENTER  revancha          M  menu", VIEW_WIDTH / 2, y + 366);
         restartButton.draw(g2, resolution.getScale());
         resultHomeButton.draw(g2, resolution.getScale());
         g2.setFont(UiTheme.font(Font.PLAIN, 12));
         g2.setColor(UiTheme.withAlpha(UiTheme.MUTED, 180));
         drawCentered(g2, "La revancha conserva la misma configuracion",
-                VIEW_WIDTH / 2, y + 424);
+                VIEW_WIDTH / 2, y + 380);
+    }
+
+    /**
+     * Dibuja el recuadro dibujado a mano del resultado cuando falta la imagen del tablero.
+     */
+    private void drawResultBoxFallback(Graphics2D g2, int x, int y, int width, int height) {
+        g2.setColor(UiTheme.withAlpha(UiTheme.PANEL, 248));
+        g2.fill(new RoundRectangle2D.Double(x, y, width, height, 30, 30));
+        g2.setColor(UiTheme.withAlpha(UiTheme.BORDER, 240));
+        g2.setStroke(new BasicStroke(2f));
+        g2.draw(new RoundRectangle2D.Double(x, y, width, height, 30, 30));
+        g2.setColor(UiTheme.withAlpha(UiTheme.GOLD, 200));
+        g2.fill(new RoundRectangle2D.Double(x + width * 0.3, y + 20, width * 0.4, 4, 4, 4));
     }
 
     /**
