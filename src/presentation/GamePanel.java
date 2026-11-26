@@ -902,9 +902,13 @@ public final class GamePanel extends JPanel implements ActionListener {
      */
     private void drawHudBand(Graphics2D g2, Field field) {
         int ground = (int) field.getGroundY();
-        g2.setPaint(new GradientPaint(0, ground, UiTheme.withAlpha(UiTheme.BG_TOP, 150),
-                0, VIEW_HEIGHT, UiTheme.withAlpha(UiTheme.BG_TOP, 235)));
+        g2.setPaint(new GradientPaint(0, ground, UiTheme.withAlpha(UiTheme.NAVY_DARK, 200),
+                0, VIEW_HEIGHT, UiTheme.withAlpha(UiTheme.NAVY_DARK, 250)));
         g2.fillRect(0, ground, VIEW_WIDTH, VIEW_HEIGHT - ground);
+        g2.setColor(UiTheme.ORANGE_DARK);
+        g2.fillRect(0, ground, VIEW_WIDTH, 3);
+        g2.setColor(UiTheme.ORANGE);
+        g2.fillRect(0, ground, VIEW_WIDTH, 2);
     }
 
     private void drawGoal(Graphics2D g2, Goal goal, boolean left) {
@@ -1535,131 +1539,149 @@ public final class GamePanel extends JPanel implements ActionListener {
     }
 
     /**
-     * Dibuja la informacion de un jugador en la franja de abajo: tiro de poder,
-     * efecto o aturdimiento, barra de vida y barra de poder.
+     * Dibuja la informacion de un jugador en la franja de abajo dentro de un panel: cabecera con
+     * efecto o aturdimiento, barra de vida con su numero, barra de poder con su etiqueta e insignias.
      */
     private void drawPlayerPanel(Graphics2D g2, Player player, boolean left) {
-        int width = 330;
-        int x;
-        Color sideColor;
-        if (left) {
-            x = 36;
-            sideColor = UiTheme.LEFT_COLOR;
-        } else {
-            x = VIEW_WIDTH - 36 - width;
-            sideColor = UiTheme.RIGHT_COLOR;
-        }
+        int ground = (int) session.getMatch().getField().getGroundY();
+        int panelY = ground + HUD_MARGIN;
+        int panelH = VIEW_HEIGHT - ground - 2 * HUD_MARGIN;
+        int panelX = left ? HUD_SIDE : VIEW_WIDTH - HUD_SIDE - HUD_PANEL_W;
+        UiTheme.paintPanel(g2, panelX, panelY, HUD_PANEL_W, panelH, 16, 3);
 
-        g2.setFont(UiTheme.font(Font.BOLD, 13));
-        g2.setColor(UiTheme.TEXT);
-        String shot = "PODER  " + player.getCharacter().getPowerShot().getName().toUpperCase();
-        String status = statusLabel(player);
-        if (left) {
-            g2.drawString(shot, x, 658);
-        } else {
-            drawRight(g2, shot, x + width, 658);
-        }
-        if (!status.isEmpty()) {
-            g2.setFont(UiTheme.font(Font.BOLD, 12));
-            g2.setColor(UiTheme.ICE);
-            if (left) {
-                drawRight(g2, status, x + width, 658);
-            } else {
-                g2.drawString(status, x, 658);
-            }
-        }
+        int innerX = panelX + HUD_PAD;
+        int innerRight = panelX + HUD_PANEL_W - HUD_SHADOW - HUD_PAD;
+        double scale = (panelH - HUD_HEADER_H - HUD_PAD / 2) / (double) HUD_BARS_REF_H;
 
+        BufferedImage lifeImage = SpriteLoader.scaledToFit(SpriteLoader.LIFE_BAR, 1000,
+                (int) Math.round(LIFE_REF_H * scale));
+        BufferedImage powerImage = SpriteLoader.scaledToFit(SpriteLoader.POWER_BAR, 1000,
+                (int) Math.round(POWER_REF_H * scale));
+        int barsTop = panelY + HUD_HEADER_H;
         double life = player.getLife() / player.getMaxLife();
-        Color lifeColor = new Color(80, 200, 110);
-        if (life < 0.3) {
-            lifeColor = UiTheme.DANGER;
-        }
-        String lifeText = "VIDA  " + (int) Math.ceil(player.getLife()) + " / " + (int) player.getMaxLife();
-        BufferedImage lifeImage = SpriteLoader.scaled(SpriteLoader.LIFE_BAR, BAR_W, BAR_H);
-        if (lifeImage != null) {
-            Color border = null;
-            if (life < 0.3) {
-                border = UiTheme.DANGER;
-            }
-            drawImageBar(g2, x, 666, life, lifeImage, lifeText, border);
+        boolean lowLife = life < 0.3;
+        Color lifeColor = lowLife ? UiTheme.DANGER : UiTheme.LIFE_GREEN;
+        boolean full = player.getPowerBar().isFull();
+        Color powerColor = full ? UiTheme.GOLD_LIGHT : UiTheme.ORANGE;
+        boolean images = lifeImage != null && powerImage != null;
+        int lifeRowH;
+        int powerRowH;
+        int barW;
+        if (images) {
+            barW = Math.max(lifeImage.getWidth(), powerImage.getWidth());
+            lifeRowH = (int) Math.round(lifeImage.getHeight() * LIFE_VISIBLE);
+            powerRowH = (int) Math.round(powerImage.getHeight() * POWER_VISIBLE);
         } else {
-            drawBar(g2, x, 666, width, life, lifeColor, lifeText, UiTheme.TEXT);
+            barW = (int) Math.round(HUD_FALLBACK_BAR_W * scale);
+            lifeRowH = (int) Math.round(HUD_FALLBACK_BAR_H * scale) + 4;
+            powerRowH = lifeRowH;
+        }
+        int barX = left ? innerX : innerRight - barW;
+        int lifeRowY = barsTop;
+        int powerRowY = lifeRowY + lifeRowH + 2;
+
+        if (images) {
+            int lifeImgY = lifeRowY - (int) Math.round(lifeImage.getHeight() * LIFE_TOP_MARGIN);
+            int powerImgY = powerRowY - (int) Math.round(powerImage.getHeight() * POWER_TOP_MARGIN);
+            drawImageBar(g2, barX, lifeImgY, life, lifeImage, LIFE_FILL_X0, LIFE_FILL_X1, LIFE_FILL_Y0,
+                    LIFE_FILL_Y1, lifeColor, lowLife ? UiTheme.DANGER : null);
+            drawImageBar(g2, barX, powerImgY, player.getPowerBar().getCharge(), powerImage, POWER_FILL_X0,
+                    POWER_FILL_X1, POWER_FILL_Y0, POWER_FILL_Y1, powerColor, full ? UiTheme.GOLD_LIGHT : null);
+        } else {
+            drawBar(g2, barX, lifeRowY + 2, barW, life, lifeColor);
+            drawBar(g2, barX, powerRowY + 2, barW, player.getPowerBar().getCharge(), powerColor);
         }
 
-        double charge = player.getPowerBar().getCharge();
-        Color powerColor = sideColor;
-        Color textColor = UiTheme.TEXT;
-        if (player.getPowerBar().isFull()) {
-            powerColor = UiTheme.GOLD;
-            textColor = UiTheme.BG_TOP;
+        int textLeft = left ? barX + barW + HUD_GAP : innerX;
+        int textRight = left ? innerRight : barX - HUD_GAP;
+        String status = statusLabel(player);
+        if (!status.isEmpty()) {
+            drawRowText(g2, status, panelY + HUD_HEADER_BASE, textLeft, textRight, left, UiTheme.ICE, 10);
         }
-        BufferedImage powerImage = SpriteLoader.scaled(SpriteLoader.POWER_BAR, BAR_W, BAR_H);
-        if (powerImage != null) {
-            Color border = null;
-            if (player.getPowerBar().isFull()) {
-                border = UiTheme.GOLD;
-            }
-            drawImageBar(g2, x, 690, charge, powerImage, powerLabel(player, left), border);
-        } else {
-            drawBar(g2, x, 690, width, charge, powerColor, powerLabel(player, left), textColor);
-        }
-        drawBadges(g2, player, x, left);
+        int badgeEdge = left ? textRight : textLeft;
+        int badgesW = drawBadges(g2, player, badgeEdge, lifeRowY + (lifeRowH - BADGE_H) / 2, left);
+        String lifeText = (int) Math.ceil(player.getLife()) + " / " + (int) player.getMaxLife();
+        drawRowText(g2, lifeText, lifeRowY + lifeRowH / 2, left ? textLeft : textLeft + badgesW,
+                left ? textRight - badgesW : textRight, left, UiTheme.TEXT_LIGHT, 13);
+        drawRowText(g2, powerLabel(player, left), powerRowY + powerRowH / 2, textLeft, textRight, left,
+                full ? UiTheme.GOLD_LIGHT : UiTheme.TEXT_LIGHT, 11);
     }
 
     /**
-     * Dibuja una barra con fondo oscuro y la imagen recortada segun el relleno (0 a 1).
+     * Dibuja un texto con sombra centrado verticalmente en la fila, pegado al lado de la barra y reducido para caber.
+     */
+    private void drawRowText(Graphics2D g2, String text, int centerY, int x0, int x1, boolean left,
+                             Color color, int size) {
+        int fontSize = size;
+        g2.setFont(UiTheme.font(Font.BOLD, fontSize));
+        while (fontSize > 8 && g2.getFontMetrics().stringWidth(text) > x1 - x0) {
+            fontSize--;
+            g2.setFont(UiTheme.font(Font.BOLD, fontSize));
+        }
+        FontMetrics metrics = g2.getFontMetrics();
+        int baseline = centerY + (metrics.getAscent() - metrics.getDescent()) / 2;
+        int x = left ? x0 : x1 - metrics.stringWidth(text);
+        UiTheme.drawShadowedText(g2, text, x, baseline, color);
+    }
+
+    /**
+     * Dibuja la barra: imagen completa sin deformar, pista oscura sobre el relleno pintado y relleno propio
+     * recortado segun el porcentaje (0 a 1), con realce opcional alrededor de la pista.
      */
     private void drawImageBar(Graphics2D g2, int x, int y, double fill, BufferedImage image,
-                              String text, Color border) {
-        g2.setColor(UiTheme.withAlpha(UiTheme.PANEL, 235));
-        g2.fill(new RoundRectangle2D.Double(x, y, BAR_W, BAR_H, 12, 12));
-        double amount = Math.max(0, Math.min(1, fill));
-        Shape oldClip = g2.getClip();
-        g2.clipRect(x, y, (int) Math.round(BAR_W * amount), BAR_H);
+                              double fx0, double fx1, double fy0, double fy1, Color color, Color highlight) {
         g2.drawImage(image, x, y, null);
-        g2.setClip(oldClip);
-        if (border != null) {
-            g2.setColor(border);
-            g2.setStroke(new BasicStroke(2.5f));
-        } else {
-            g2.setColor(UiTheme.withAlpha(UiTheme.BORDER, 230));
-            g2.setStroke(new BasicStroke(1.5f));
+        Rectangle track = region(x, y, image, fx0, fy0, fx1, fy1);
+        RoundRectangle2D shape = new RoundRectangle2D.Double(track.x, track.y, track.width, track.height,
+                track.height / 4, track.height / 4);
+        g2.setColor(UiTheme.NAVY_DARK);
+        g2.fill(shape);
+        double amount = Math.max(0, Math.min(1, fill));
+        if (amount > 0) {
+            Shape oldClip = g2.getClip();
+            g2.clip(shape);
+            g2.setPaint(new GradientPaint(0, track.y, UiTheme.lighten(color, 0.3f),
+                    0, track.y + track.height, UiTheme.darken(color, 0.25f)));
+            g2.fill(new Rectangle2D.Double(track.x, track.y, track.width * amount, track.height));
+            g2.setClip(oldClip);
         }
-        g2.draw(new RoundRectangle2D.Double(x, y, BAR_W, BAR_H, 12, 12));
-        g2.setFont(UiTheme.font(Font.BOLD, 11));
-        g2.setColor(UiTheme.withAlpha(Color.BLACK, 170));
-        drawCentered(g2, text, x + BAR_W / 2 + 1, y + 14);
-        g2.setColor(UiTheme.TEXT);
-        drawCentered(g2, text, x + BAR_W / 2, y + 13);
+        if (highlight != null) {
+            g2.setColor(highlight);
+            g2.setStroke(new BasicStroke(2f));
+            g2.draw(shape);
+        }
     }
 
     /**
-     * Dibuja junto al panel las insignias de poder listo/aura y de electrocucion o aturdimiento.
+     * Dibuja las insignias de poder listo/aura y de electrocucion o aturdimiento junto al borde dado
+     * (hacia la izquierda en el panel izquierdo, hacia la derecha en el derecho) y devuelve el ancho usado.
      */
-    private void drawBadges(Graphics2D g2, Player player, int panelX, boolean left) {
+    private int drawBadges(Graphics2D g2, Player player, int edge, int y, boolean left) {
         boolean fire = player.hasAura() || player.getPowerBar().isFull();
         Effect effect = player.getEffect();
         boolean bolt = player.isStunned()
                 || (effect != null && "Electrocutado".equals(effect.getName()));
-        int step = BADGE_W + 4;
+        int step = BADGE_W + 3;
         int slot = 0;
         if (fire) {
-            drawBadge(g2, SpriteLoader.BADGE_FIRE, badgeX(panelX, left, slot, step), 672);
+            drawBadge(g2, SpriteLoader.BADGE_FIRE, badgeX(edge, left, slot, step), y);
             slot++;
         }
         if (bolt) {
-            drawBadge(g2, SpriteLoader.BADGE_BOLT, badgeX(panelX, left, slot, step), 672);
+            drawBadge(g2, SpriteLoader.BADGE_BOLT, badgeX(edge, left, slot, step), y);
+            slot++;
         }
+        return slot * step;
     }
 
     /**
-     * Devuelve la coordenada x de la insignia numero slot, hacia afuera del panel.
+     * Devuelve la coordenada x de la insignia numero slot respecto al borde dado.
      */
-    private int badgeX(int panelX, boolean left, int slot, int step) {
+    private int badgeX(int edge, boolean left, int slot, int step) {
         if (left) {
-            return panelX + BAR_W + 6 + slot * step;
+            return edge - BADGE_W - slot * step;
         }
-        return panelX - 6 - BADGE_W - slot * step;
+        return edge + slot * step;
     }
 
     /**
@@ -1700,7 +1722,7 @@ public final class GamePanel extends JPanel implements ActionListener {
     private String powerLabel(Player player, boolean left) {
         String text;
         if (player.hasAura()) {
-            text = "AURA ACTIVA - TOCA EL BALON";
+            text = "AURA - TOCA EL BALON";
         } else if (player.getPowerBar().isFull()) {
             HumanController human;
             if (left) {
@@ -1713,7 +1735,7 @@ public final class GamePanel extends JPanel implements ActionListener {
             } else if (left) {
                 text = "PODER LISTO - PRESIONA Q";
             } else {
-                text = "PODER LISTO - CTRL DERECHO";
+                text = "PODER LISTO - CTRL DER.";
             }
         } else {
             text = "PODER  " + (int) Math.round(player.getPowerBar().getCharge() * 100) + "%";

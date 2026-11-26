@@ -55,6 +55,7 @@ public final class UiTheme {
     public static final Color GOLD_LIGHT = new Color(0xFF, 0xC5, 0x3D);
     public static final Color TEXT_LIGHT = new Color(0xF2, 0xF6, 0xFF);
     public static final Color TEXT_SHADOW = new Color(5, 10, 24, 180);
+    public static final Color LIFE_GREEN = new Color(0x4C, 0xC9, 0x6E);
 
     public static final String FONT_FAMILY = "SansSerif";
 
