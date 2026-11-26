@@ -71,7 +71,7 @@ public final class HelpDialog extends JDialog {
                 + "<p><b style='color:" + BLUE + "'>JUGADOR 2</b> &nbsp; Flechas mover &nbsp; Arriba saltar"
                 + " &nbsp; Abajo patear &nbsp; Ctrl derecho poder</p>"
                 + "<p><b style='color:" + GOLD + "'>PARTIDA</b> &nbsp; ESC o P pausa &nbsp; "
-                + "T terminar &nbsp; M menu &nbsp; R revancha al terminar</p>"
+                + "T terminar &nbsp; G guardar partida &nbsp; M menu &nbsp; R revancha al terminar</p>"
                 + "<p style='color:" + GOLD + "'><b>PODERES</b></p>"
                 + "<p style='color:" + MUTED + "'>La barra se llena en 10 segundos (y sube 1/4 al recibir "
                 + "un gol). Con la barra llena, la tecla de poder activa un aura. Al tocar el balon con "
