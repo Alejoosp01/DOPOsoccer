@@ -1,10 +1,15 @@
 package presentation;
 
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.GradientPaint;
 import java.awt.Graphics2D;
+import java.awt.Paint;
+import java.awt.Rectangle;
 import java.awt.RenderingHints;
+import java.awt.Stroke;
 
 import javax.swing.BorderFactory;
 import javax.swing.JLabel;
@@ -40,6 +45,16 @@ public final class UiTheme {
     public static final Color GRASS_LIGHT = new Color(64, 150, 74);
     public static final Color GRASS_DARK = new Color(50, 128, 62);
     public static final Color HUD_BAND = new Color(14, 21, 35);
+
+    /** Paleta azul marino y naranja/dorado, igual a la de los botones y paneles. */
+    public static final Color NAVY_DARK = new Color(0x0E, 0x1A, 0x2E);
+    public static final Color NAVY = new Color(0x1E, 0x2A, 0x44);
+    public static final Color NAVY_LIGHT = new Color(0x33, 0x40, 0x5E);
+    public static final Color ORANGE = new Color(0xF2, 0x6B, 0x1D);
+    public static final Color ORANGE_DARK = new Color(0xB8, 0x46, 0x1A);
+    public static final Color GOLD_LIGHT = new Color(0xFF, 0xC5, 0x3D);
+    public static final Color TEXT_LIGHT = new Color(0xF2, 0xF6, 0xFF);
+    public static final Color TEXT_SHADOW = new Color(5, 10, 24, 180);
 
     public static final String FONT_FAMILY = "SansSerif";
 
@@ -161,6 +176,75 @@ public final class UiTheme {
         g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,
                 RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
         g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+    }
+
+    /**
+     * Pinta un panel azul marino con borde naranja, linea dorada interior y sombra, con grosor base de 4 px.
+     */
+    public static void paintPanel(Graphics2D g, int x, int y, int w, int h) {
+        paintPanel(g, x, y, w, h, Math.max(8, Math.min(w, h) / 6), 4);
+    }
+
+    /**
+     * Pinta el panel con el radio de esquina y el grosor de borde indicados y restaura el estado del Graphics2D.
+     */
+    public static void paintPanel(Graphics2D g, int x, int y, int w, int h, int radius, int thickness) {
+        if (w <= 0 || h <= 0) {
+            return;
+        }
+        Paint oldPaint = g.getPaint();
+        Stroke oldStroke = g.getStroke();
+        Object oldAa = g.getRenderingHint(RenderingHints.KEY_ANTIALIASING);
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        int shadow = Math.max(2, thickness);
+        int bw = Math.max(1, w - shadow);
+        int bh = Math.max(1, h - shadow);
+        g.setColor(new Color(0, 0, 0, 90));
+        g.fillRoundRect(x + shadow, y + shadow, bw, bh, radius, radius);
+        g.setPaint(new GradientPaint(0, y, NAVY_LIGHT, 0, y + bh, NAVY_DARK));
+        g.fillRoundRect(x, y, bw, bh, radius, radius);
+        g.setStroke(new BasicStroke(thickness));
+        g.setColor(ORANGE);
+        int half = thickness / 2;
+        g.drawRoundRect(x + half, y + half, bw - thickness, bh - thickness, radius, radius);
+        g.setStroke(new BasicStroke(Math.max(1f, thickness / 4f)));
+        g.setColor(GOLD_LIGHT);
+        int inset = thickness + 1;
+        g.drawRoundRect(x + inset, y + inset, bw - 2 * inset, bh - 2 * inset,
+                Math.max(2, radius - 2 * inset), Math.max(2, radius - 2 * inset));
+        g.setStroke(oldStroke);
+        g.setPaint(oldPaint);
+        if (oldAa != null) {
+            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, oldAa);
+        }
+    }
+
+    /**
+     * Dibuja el texto con una sombra oscura desplazada 2 px (la base de la fuente queda en x, y).
+     */
+    public static void drawShadowedText(Graphics2D g, String text, int x, int y, Color color) {
+        if (text == null || text.isEmpty()) {
+            return;
+        }
+        Paint oldPaint = g.getPaint();
+        g.setColor(TEXT_SHADOW);
+        g.drawString(text, x + 2, y + 2);
+        g.setColor(color);
+        g.drawString(text, x, y);
+        g.setPaint(oldPaint);
+    }
+
+    /**
+     * Dibuja el texto con sombra centrado horizontal y verticalmente en el area; un texto null o vacio no dibuja nada.
+     */
+    public static void drawCenteredText(Graphics2D g, String text, Rectangle area, Color color) {
+        if (text == null || text.isEmpty() || area == null) {
+            return;
+        }
+        FontMetrics metrics = g.getFontMetrics();
+        int x = area.x + (area.width - metrics.stringWidth(text)) / 2;
+        int y = area.y + (area.height - metrics.getHeight()) / 2 + metrics.getAscent();
+        drawShadowedText(g, text, x, y, color);
     }
 
     public static Color withAlpha(Color color, int alpha) {
