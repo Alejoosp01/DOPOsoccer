@@ -53,6 +53,19 @@ public class MachineControllerTest {
     }
 
     @Test
+    public void shouldKickBallWithinReachWithoutTouchingBody() {
+        double y = match.getField().getPlayerStartY();
+        left.setPosition(360, y);
+        double distance = Player.WIDTH / 2 + Field.BALL_RADIUS + Player.KICK_REACH - 10;
+        match.getBall().setPosition(360 + distance, y + 40);
+        assertFalse(left.touchesBall(match.getBall()));
+
+        machine.update(match, Side.LEFT, 0.1);
+
+        assertTrue(match.getBall().getVelocityX() > 0);
+    }
+
+    @Test
     public void shouldJumpForHighBall() {
         match.getBall().setPosition(320, 450);
 

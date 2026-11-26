@@ -201,7 +201,7 @@ public class Match implements Serializable {
         }
         boolean hitsRival = player.reachesWithKick(opponent);
         boolean touchedBall;
-        if (player.hasAura() && player.touchesBall(ball)) {
+        if (player.hasAura() && player.reachesBallWithKick(ball)) {
             firePowerShot(player);
             touchedBall = true;
         } else {

@@ -189,11 +189,11 @@ public class Player implements Serializable {
     }
 
     /**
-     * Patea el balon si lo toca y la patada esta lista.
+     * Patea el balon si lo toca o esta al alcance del pie y la patada esta lista.
      * La fuerza con que sale el balon es fija: Kick solo cambia el daño.
      */
     public boolean kick(Ball ball) {
-        if (ball == null || !canKick() || !touchesBall(ball)) {
+        if (ball == null || !canKick() || !reachesBallWithKick(ball)) {
             return false;
         }
         double front = WIDTH / 2 + ball.getRadius() + 1;
@@ -267,6 +267,21 @@ public class Player implements Serializable {
     }
 
     /**
+     * Devuelve la zona del pie: KICK_REACH delante del jugador, en la mitad baja del cuerpo.
+     */
+    private Hitbox kickZone() {
+        Hitbox body = getBounds();
+        double footTop = body.getY() + body.getHeight() / 2;
+        double footStart;
+        if (leftSide) {
+            footStart = body.getMaxX();
+        } else {
+            footStart = body.getX() - KICK_REACH;
+        }
+        return new Hitbox(footStart, footTop, KICK_REACH, body.getMaxY() - footTop);
+    }
+
+    /**
      * Devuelve si la zona del pie alcanza el cuerpo de otro jugador (golpe directo).
      * La zona es un rectangulo de KICK_REACH delante del jugador, en la mitad baja del cuerpo.
      */
@@ -274,23 +289,27 @@ public class Player implements Serializable {
         if (other == null) {
             return false;
         }
-        Hitbox body = getBounds();
-        double footTop = body.getY() + body.getHeight() / 2;
-        double footBottom = body.getMaxY();
-        double footStart;
-        double footEnd;
-        if (leftSide) {
-            footStart = body.getMaxX();
-            footEnd = footStart + KICK_REACH;
-        } else {
-            footEnd = body.getX();
-            footStart = footEnd - KICK_REACH;
-        }
+        Hitbox zone = kickZone();
         Hitbox rival = other.getBounds();
-        return rival.getX() <= footEnd
-                && rival.getMaxX() >= footStart
-                && rival.getY() <= footBottom
-                && rival.getMaxY() >= footTop;
+        return rival.getX() <= zone.getMaxX()
+                && rival.getMaxX() >= zone.getX()
+                && rival.getY() <= zone.getMaxY()
+                && rival.getMaxY() >= zone.getY();
+    }
+
+    /**
+     * Devuelve si el balon toca al jugador o queda dentro de la zona del pie.
+     */
+    public boolean reachesBallWithKick(Ball ball) {
+        if (ball == null) {
+            return false;
+        }
+        if (touchesBall(ball)) {
+            return true;
+        }
+        double radius = ball.getRadius();
+        Hitbox ballBox = new Hitbox(ball.getX() - radius, ball.getY() - radius, radius * 2, radius * 2);
+        return kickZone().intersects(ballBox);
     }
 
     /**

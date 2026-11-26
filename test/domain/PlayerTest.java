@@ -142,6 +142,52 @@ public class PlayerTest {
     }
 
     @Test
+    public void shouldKickBallSeparatedFromBodyButWithinKickReach() {
+        double distance = Player.WIDTH / 2 + Field.BALL_RADIUS + Player.KICK_REACH - 10;
+        Ball ball = new Ball(player.getX() + distance, player.getY() + 40, Field.BALL_RADIUS);
+        assertFalse(player.touchesBall(ball));
+        assertTrue(player.reachesBallWithKick(ball));
+        assertTrue(player.kick(ball));
+        assertTrue(ball.getVelocityX() > 0);
+    }
+
+    @Test
+    public void shouldKickBallWithinKickReachForRightSidePlayer() {
+        Player right = TestData.player(false);
+        right.setPosition(800, field.getPlayerStartY());
+        double distance = Player.WIDTH / 2 + Field.BALL_RADIUS + Player.KICK_REACH - 10;
+        Ball ball = new Ball(right.getX() - distance, right.getY() + 40, Field.BALL_RADIUS);
+        assertFalse(right.touchesBall(ball));
+        assertTrue(right.kick(ball));
+        assertTrue(ball.getVelocityX() < 0);
+    }
+
+    @Test
+    public void shouldNotKickBallBeyondKickReach() {
+        double distance = Player.WIDTH / 2 + Field.BALL_RADIUS + Player.KICK_REACH + 20;
+        Ball ball = new Ball(player.getX() + distance, player.getY() + 40, Field.BALL_RADIUS);
+        assertFalse(player.reachesBallWithKick(ball));
+        assertFalse(player.kick(ball));
+        assertEquals(0, ball.getVelocityX(), 0.001);
+        assertEquals(0, ball.getVelocityY(), 0.001);
+    }
+
+    @Test
+    public void shouldNotKickBallBehindWithinKickReach() {
+        double distance = Player.WIDTH / 2 + Field.BALL_RADIUS + Player.KICK_REACH - 10;
+        Ball ball = new Ball(player.getX() - distance, player.getY() + 40, Field.BALL_RADIUS);
+        assertFalse(player.touchesBall(ball));
+        assertFalse(player.reachesBallWithKick(ball));
+        assertFalse(player.kick(ball));
+        assertEquals(0, ball.getVelocityX(), 0.001);
+    }
+
+    @Test
+    public void shouldNotReachNullBallWithKick() {
+        assertFalse(player.reachesBallWithKick(null));
+    }
+
+    @Test
     public void shouldReachRivalInFrontWithTheFoot() {
         Player rival = TestData.player(false);
         rival.setPosition(player.getX() + Player.WIDTH + 10, player.getY());

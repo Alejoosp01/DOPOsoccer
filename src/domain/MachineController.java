@@ -65,7 +65,7 @@ public abstract class MachineController implements PlayerController {
             jumpPending = false;
         }
 
-        if (self.touchesBall(ball) && shouldKick(self, ball)) {
+        if (self.reachesBallWithKick(ball) && shouldKick(self, ball)) {
             if (self.canKick()) {
                 match.kick(side);
             }
@@ -88,7 +88,7 @@ public abstract class MachineController implements PlayerController {
     protected abstract void decide(Match match, Player self, Ball ball);
 
     /**
-     * Devuelve si debe patear cuando toca el balon: por defecto solo si el balon esta delante.
+     * Devuelve si debe patear cuando alcanza el balon: por defecto solo si el balon esta delante.
      */
     protected boolean shouldKick(Player self, Ball ball) {
         return isBallInFront(self, ball);
