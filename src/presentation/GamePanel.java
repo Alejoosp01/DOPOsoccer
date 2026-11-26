@@ -11,6 +11,7 @@ import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RadialGradientPaint;
+import java.awt.Rectangle;
 import java.awt.Shape;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -93,15 +94,40 @@ public final class GamePanel extends JPanel implements ActionListener {
     /** Posicion Y logica de los botones del resultado. */
     private static final int RESULT_BUTTONS_Y = 403;
     private static final int VIEW_WIDTH = 1280;
-    private static final int BOARD_W = 260;
-    private static final int BOARD_H = 120;
+    /** Tamano logico maximo del marcador (se conserva la proporcion de la imagen). */
+    private static final int BOARD_MAX_W = 300;
+    private static final int BOARD_MAX_H = 140;
     private static final int BOARD_TOP = 4;
-    private static final int CLOCK_W = 110;
-    private static final int CLOCK_H = 65;
-    private static final int RIBBON_W = 200;
-    private static final int RIBBON_H = 74;
+    /** Tamano logico maximo del reloj y cuanto se mete bajo el marcador. */
+    private static final int CLOCK_MAX_W = 160;
+    private static final int CLOCK_MAX_H = 94;
+    private static final int CLOCK_OVERLAP = 8;
+    /** Tamano logico maximo de las cintas de nombre. */
+    private static final int RIBBON_MAX_W = 230;
+    private static final int RIBBON_MAX_H = 85;
     private static final int RIBBON_Y = 14;
     private static final int RIBBON_GAP = 8;
+    /** Ventanas de goles del marcador (fracciones de scoreboard_panel.png, 902x418). */
+    private static final double WIN_LEFT_X0 = 0.105;
+    private static final double WIN_LEFT_X1 = 0.305;
+    private static final double WIN_RIGHT_X0 = 0.693;
+    private static final double WIN_RIGHT_X1 = 0.893;
+    private static final double WIN_Y0 = 0.42;
+    private static final double WIN_Y1 = 0.75;
+    /** Proporcion del alto de la ventana que ocupa la fuente de los goles. */
+    private static final double GOALS_HEIGHT_RATIO = 0.75;
+    /** Zona libre de texto del reloj, a la derecha del icono (clock_timer_bar.png, 681x400). */
+    private static final double CLOCK_TEXT_X0 = 0.45;
+    private static final double CLOCK_TEXT_X1 = 0.93;
+    private static final double CLOCK_TEXT_Y0 = 0.36;
+    private static final double CLOCK_TEXT_Y1 = 0.58;
+    private static final int CLOCK_FONT_MAX = 18;
+    private static final int CLOCK_FONT_MIN = 10;
+    /** Zona util de texto de las cintas (ribbon_*.png, 740x273). */
+    private static final double RIBBON_TEXT_X0 = 0.18;
+    private static final double RIBBON_TEXT_X1 = 0.82;
+    private static final double RIBBON_TEXT_Y0 = 0.25;
+    private static final double RIBBON_TEXT_Y1 = 0.58;
     private static final int BAR_W = 330;
     private static final int BAR_H = 18;
     private static final int BADGE_W = 28;
@@ -1243,10 +1269,10 @@ public final class GamePanel extends JPanel implements ActionListener {
     }
 
     private void drawHud(Graphics2D g2, Match match) {
-        BufferedImage board = SpriteLoader.scaled(SpriteLoader.SCOREBOARD_PANEL, BOARD_W, BOARD_H);
-        BufferedImage clock = SpriteLoader.scaled(SpriteLoader.CLOCK_TIMER_BAR, CLOCK_W, CLOCK_H);
-        BufferedImage blue = SpriteLoader.scaled(SpriteLoader.RIBBON_BLUE, RIBBON_W, RIBBON_H);
-        BufferedImage red = SpriteLoader.scaled(SpriteLoader.RIBBON_RED, RIBBON_W, RIBBON_H);
+        BufferedImage board = SpriteLoader.scaledToFit(SpriteLoader.SCOREBOARD_PANEL, BOARD_MAX_W, BOARD_MAX_H);
+        BufferedImage clock = SpriteLoader.scaledToFit(SpriteLoader.CLOCK_TIMER_BAR, CLOCK_MAX_W, CLOCK_MAX_H);
+        BufferedImage blue = SpriteLoader.scaledToFit(SpriteLoader.RIBBON_BLUE, RIBBON_MAX_W, RIBBON_MAX_H);
+        BufferedImage red = SpriteLoader.scaledToFit(SpriteLoader.RIBBON_RED, RIBBON_MAX_W, RIBBON_MAX_H);
         if (board != null && clock != null && blue != null && red != null) {
             drawScoreboardImages(g2, match, board, clock, blue, red);
         } else {
@@ -1258,66 +1284,148 @@ public final class GamePanel extends JPanel implements ActionListener {
     }
 
     /**
-     * Dibuja el marcador, el reloj y las cintas de nombre usando las imagenes del HUD.
+     * Dibuja el marcador, el reloj y las cintas de nombre sin estirar las imagenes del HUD.
      */
     private void drawScoreboardImages(Graphics2D g2, Match match, BufferedImage board,
                                       BufferedImage clock, BufferedImage blue, BufferedImage red) {
         int center = VIEW_WIDTH / 2;
-        g2.drawImage(board, center - BOARD_W / 2, BOARD_TOP, null);
-        g2.setFont(UiTheme.font(Font.BOLD, 40));
-        g2.setColor(UiTheme.TEXT);
+        int boardX = center - board.getWidth() / 2;
+        g2.drawImage(board, boardX, BOARD_TOP, null);
         Score score = match.getScore();
-        drawCentered(g2, score.getLeftGoals() + " - " + score.getRightGoals(),
-                center, BOARD_TOP + BOARD_H / 2 + 14);
+        drawGoals(g2, String.valueOf(score.getLeftGoals()),
+                region(boardX, BOARD_TOP, board, WIN_LEFT_X0, WIN_Y0, WIN_LEFT_X1, WIN_Y1));
+        drawGoals(g2, String.valueOf(score.getRightGoals()),
+                region(boardX, BOARD_TOP, board, WIN_RIGHT_X0, WIN_Y0, WIN_RIGHT_X1, WIN_Y1));
 
-        g2.drawImage(clock, center - CLOCK_W / 2, BOARD_TOP + BOARD_H - 8, null);
-        g2.setFont(UiTheme.font(Font.BOLD, 13));
-        if (match.isSuddenDeath()) {
-            g2.setColor(UiTheme.GOLD);
-        } else {
-            g2.setColor(UiTheme.TEXT);
-        }
-        drawCentered(g2, matchSubtitle(match), center, BOARD_TOP + BOARD_H - 8 + CLOCK_H / 2 + 6);
+        int clockX = center - clock.getWidth() / 2;
+        int clockY = BOARD_TOP + board.getHeight() - CLOCK_OVERLAP;
+        g2.drawImage(clock, clockX, clockY, null);
+        drawClockText(g2, match, region(clockX, clockY, clock,
+                CLOCK_TEXT_X0, CLOCK_TEXT_Y0, CLOCK_TEXT_X1, CLOCK_TEXT_Y1));
 
-        int leftX = center - BOARD_W / 2 - RIBBON_GAP - RIBBON_W;
-        int rightX = center + BOARD_W / 2 + RIBBON_GAP;
+        int leftX = boardX - RIBBON_GAP - blue.getWidth();
+        int rightX = boardX + board.getWidth() + RIBBON_GAP;
         g2.drawImage(blue, leftX, RIBBON_Y, null);
         g2.drawImage(red, rightX, RIBBON_Y, null);
-        drawRibbonName(g2, session.getLeftCharacter().getName(), leftX + RIBBON_W / 2);
-        drawRibbonName(g2, session.getRightCharacter().getName(), rightX + RIBBON_W / 2);
-        drawRibbonInfo(g2, match.getLeftPlayer(), true, leftX + RIBBON_W / 2);
-        drawRibbonInfo(g2, match.getRightPlayer(), false, rightX + RIBBON_W / 2);
+        drawRibbonName(g2, session.getLeftCharacter().getName(),
+                region(leftX, RIBBON_Y, blue, RIBBON_TEXT_X0, RIBBON_TEXT_Y0, RIBBON_TEXT_X1, RIBBON_TEXT_Y1));
+        drawRibbonName(g2, session.getRightCharacter().getName(),
+                region(rightX, RIBBON_Y, red, RIBBON_TEXT_X0, RIBBON_TEXT_Y0, RIBBON_TEXT_X1, RIBBON_TEXT_Y1));
+        int pillY = RIBBON_Y + blue.getHeight() + 2;
+        drawRibbonPill(g2, match.getLeftPlayer(), true, leftX + blue.getWidth() / 2, pillY);
+        drawRibbonPill(g2, match.getRightPlayer(), false, rightX + red.getWidth() / 2, pillY);
     }
 
     /**
-     * Dibuja el nombre del jugador centrado en su cinta, reduciendo la fuente si no cabe.
+     * Devuelve el rectangulo logico que ocupa una region de la imagen dada como fracciones de su tamano.
      */
-    private void drawRibbonName(Graphics2D g2, String name, int centerX) {
-        String text = name.toUpperCase();
-        int size = 16;
+    private Rectangle region(int x, int y, BufferedImage img, double fx0, double fy0, double fx1, double fy1) {
+        int w = img.getWidth();
+        int h = img.getHeight();
+        int rx = x + (int) Math.round(w * fx0);
+        int ry = y + (int) Math.round(h * fy0);
+        return new Rectangle(rx, ry, (int) Math.round(w * (fx1 - fx0)), (int) Math.round(h * (fy1 - fy0)));
+    }
+
+    /**
+     * Dibuja los goles centrados en su ventana del marcador con una fuente que se ajusta al alto y al ancho.
+     */
+    private void drawGoals(Graphics2D g2, String text, Rectangle area) {
+        int size = Math.max(10, (int) Math.round(area.height * GOALS_HEIGHT_RATIO));
         g2.setFont(UiTheme.font(Font.BOLD, size));
-        while (size > 9 && g2.getFontMetrics().stringWidth(text) > RIBBON_W - 56) {
+        while (size > 10 && g2.getFontMetrics().stringWidth(text) > area.width - 6) {
             size--;
             g2.setFont(UiTheme.font(Font.BOLD, size));
         }
-        int baseline = RIBBON_Y + RIBBON_H / 2 + 6;
-        g2.setColor(UiTheme.withAlpha(Color.BLACK, 160));
-        drawCentered(g2, text, centerX + 1, baseline + 1);
-        g2.setColor(Color.WHITE);
-        drawCentered(g2, text, centerX, baseline);
+        UiTheme.drawCenteredText(g2, text, area, UiTheme.TEXT_LIGHT);
     }
 
     /**
-     * Dibuja bajo la cinta el rol, las estadisticas y los puntos del jugador.
+     * Dibuja el tiempo o la meta en la zona libre del reloj, usando la version corta si no cabe.
      */
-    private void drawRibbonInfo(Graphics2D g2, Player player, boolean left, int centerX) {
-        int y = RIBBON_Y + RIBBON_H + 14;
-        g2.setFont(UiTheme.font(Font.PLAIN, 12));
-        g2.setColor(UiTheme.MUTED);
-        drawCentered(g2, roleLabel(left), centerX, y);
-        g2.setFont(UiTheme.font(Font.PLAIN, 11));
-        drawCentered(g2, statsLabel(player), centerX, y + 15);
-        drawCentered(g2, "Puntos " + player.getProfile().getPoints(), centerX, y + 29);
+    private void drawClockText(Graphics2D g2, Match match, Rectangle area) {
+        String text = matchSubtitle(match);
+        fitClockFont(g2, text, area);
+        if (g2.getFontMetrics().stringWidth(text) > area.width) {
+            text = shortSubtitle(match);
+            fitClockFont(g2, text, area);
+        }
+        Color color = UiTheme.TEXT_LIGHT;
+        if (match.isSuddenDeath()) {
+            color = UiTheme.GOLD;
+        }
+        UiTheme.drawCenteredText(g2, text, area, color);
+    }
+
+    /**
+     * Ajusta la fuente del reloj para que el texto quepa en el area, sin bajar del minimo.
+     */
+    private void fitClockFont(Graphics2D g2, String text, Rectangle area) {
+        int size = Math.min(CLOCK_FONT_MAX, Math.max(CLOCK_FONT_MIN, area.height));
+        g2.setFont(UiTheme.font(Font.BOLD, size));
+        while (size > CLOCK_FONT_MIN && g2.getFontMetrics().stringWidth(text) > area.width) {
+            size--;
+            g2.setFont(UiTheme.font(Font.BOLD, size));
+        }
+    }
+
+    /**
+     * Devuelve la version corta del texto del reloj para cuando la normal no cabe.
+     */
+    private String shortSubtitle(Match match) {
+        if (match.isSuddenDeath()) {
+            return "M. SUBITA";
+        }
+        if (session.getConfig().isTimed()) {
+            return formatTime(match.getTimeLeft());
+        }
+        return "A " + session.getConfig().getGoalsTarget();
+    }
+
+    /**
+     * Dibuja el nombre del jugador en mayusculas centrado en la zona util de su cinta, reduciendo la fuente si no cabe.
+     */
+    private void drawRibbonName(Graphics2D g2, String name, Rectangle area) {
+        String text = name.toUpperCase();
+        int size = Math.max(9, Math.min(18, area.height));
+        g2.setFont(UiTheme.font(Font.BOLD, size));
+        while (size > 9 && g2.getFontMetrics().stringWidth(text) > area.width) {
+            size--;
+            g2.setFont(UiTheme.font(Font.BOLD, size));
+        }
+        UiTheme.drawCenteredText(g2, text, area, Color.WHITE);
+    }
+
+    /**
+     * Dibuja bajo la cinta una pastilla compacta con el rol corto y los puntos del jugador.
+     */
+    private void drawRibbonPill(Graphics2D g2, Player player, boolean left, int centerX, int y) {
+        String text = shortRole(left) + " · " + player.getProfile().getPoints() + " pts";
+        g2.setFont(UiTheme.font(Font.BOLD, 12));
+        int width = g2.getFontMetrics().stringWidth(text) + 24;
+        int height = 24;
+        int x = centerX - width / 2;
+        UiTheme.paintPanel(g2, x, y, width, height, 12, 3);
+        UiTheme.drawCenteredText(g2, text, new Rectangle(x, y, width - 3, height - 3), UiTheme.TEXT_LIGHT);
+    }
+
+    /**
+     * Devuelve el rol abreviado del jugador para la pastilla bajo la cinta.
+     */
+    private String shortRole(boolean left) {
+        HumanController human;
+        if (left) {
+            human = leftHuman();
+        } else {
+            human = rightHuman();
+        }
+        if (human == null) {
+            return "CPU";
+        }
+        if (left) {
+            return "J1";
+        }
+        return "J2";
     }
 
     /**
