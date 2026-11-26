@@ -12,7 +12,10 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.RadialGradientPaint;
+import java.awt.RenderingHints;
 import java.awt.geom.Point2D;
+import java.awt.geom.RoundRectangle2D;
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.function.Consumer;
 
@@ -317,13 +320,68 @@ public final class SetupPanel extends JPanel {
         JPanel detailRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         detailRow.setOpaque(false);
         detailRow.setMaximumSize(new Dimension(1076, 22));
+        detail.setForeground(UiTheme.TEXT);
         detailRow.add(detail);
+
+        StatsBoardPanel statsBoard = new StatsBoardPanel();
+        statsBoard.add(detailRow);
+        statsBoard.add(buildUpgradeRow(isLeft));
 
         section.add(titleRow);
         section.add(cardRow);
-        section.add(detailRow);
-        section.add(buildUpgradeRow(isLeft));
+        section.add(statsBoard);
         return section;
+    }
+
+    /**
+     * Panel que pinta el tablero de estadisticas como fondo de los detalles y las mejoras.
+     */
+    private static final class StatsBoardPanel extends JPanel {
+        /** Ancho maximo del tablero en pixeles. */
+        private static final int BOARD_MAX_WIDTH = 1076;
+        /** Alto maximo del tablero en pixeles. */
+        private static final int BOARD_MAX_HEIGHT = 150;
+        /** Insets de origen (px de la imagen 918x664) y factor uniforme del 9-slice. */
+        private static final int SRC_LEFT = 300;
+        private static final int SRC_TOP = 150;
+        private static final int SRC_RIGHT = 300;
+        private static final int SRC_BOTTOM = 144;
+        private static final double SLICE_FACTOR = 0.25;
+
+        /**
+         * Crea el panel transparente con margenes que evitan las cintas del tablero.
+         */
+        StatsBoardPanel() {
+            setOpaque(false);
+            setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+            setBorder(BorderFactory.createEmptyBorder(40, 24, 38, 24));
+            setMaximumSize(new Dimension(BOARD_MAX_WIDTH, BOARD_MAX_HEIGHT));
+            setAlignmentX(LEFT_ALIGNMENT);
+        }
+
+        /**
+         * Pinta la imagen del tablero escalada al tamano actual o un respaldo translucido.
+         */
+        @Override
+        protected void paintComponent(Graphics graphics) {
+            Graphics2D g2 = (Graphics2D) graphics.create();
+            BufferedImage board =
+                    SpriteLoader.nineSlice(SpriteLoader.STATS_BOARD, getWidth(), getHeight(),
+                            SRC_LEFT, SRC_TOP, SRC_RIGHT, SRC_BOTTOM, SLICE_FACTOR);
+            if (board != null) {
+                g2.drawImage(board, 0, 0, null);
+            } else {
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                        RenderingHints.VALUE_ANTIALIAS_ON);
+                RoundRectangle2D shape =
+                        new RoundRectangle2D.Double(0, 0, getWidth() - 1, getHeight() - 1, 18, 18);
+                g2.setColor(UiTheme.withAlpha(UiTheme.PANEL, 220));
+                g2.fill(shape);
+                g2.setColor(UiTheme.BORDER);
+                g2.draw(shape);
+            }
+            g2.dispose();
+        }
     }
 
     /**

@@ -156,6 +156,49 @@ public final class SpriteLoader {
     }
 
     /**
+     * Devuelve la imagen escalada en 9 partes con esquinas sin deformar, en cache.
+     */
+    public static BufferedImage nineSlice(String path, int width, int height,
+                                          int left, int top, int right, int bottom, double factor) {
+        BufferedImage source = load(path);
+        if (source == null || width <= 0 || height <= 0) {
+            return null;
+        }
+        String key = path + "@9s" + width + "x" + height + "/" + left + "," + top + ","
+                + right + "," + bottom + "," + factor;
+        BufferedImage result = SCALED.get(key);
+        if (result != null) {
+            return result;
+        }
+        int dl = (int) Math.round(left * factor);
+        int dt = (int) Math.round(top * factor);
+        int dr = (int) Math.round(right * factor);
+        int db = (int) Math.round(bottom * factor);
+        if (dl + dr >= width || dt + db >= height) {
+            return scaled(path, width, height);
+        }
+        int sw = source.getWidth();
+        int sh = source.getHeight();
+        int[] sx = {0, left, sw - right, sw};
+        int[] sy = {0, top, sh - bottom, sh};
+        int[] dx = {0, dl, width - dr, width};
+        int[] dy = {0, dt, height - db, height};
+        result = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = result.createGraphics();
+        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+        g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+        for (int row = 0; row < 3; row++) {
+            for (int col = 0; col < 3; col++) {
+                g2.drawImage(source, dx[col], dy[row], dx[col + 1], dy[row + 1],
+                        sx[col], sy[row], sx[col + 1], sy[row + 1], null);
+            }
+        }
+        g2.dispose();
+        SCALED.put(key, result);
+        return result;
+    }
+
+    /**
      * Devuelve la imagen de la ruta indicada (por ejemplo "/sprites/ball/ball.png"), o null si no existe.
      */
     public static BufferedImage load(String path) {
