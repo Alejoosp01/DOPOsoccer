@@ -7,15 +7,14 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.Graphics;
+import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.GridLayout;
 import java.awt.Insets;
 import java.awt.RadialGradientPaint;
-import java.awt.RenderingHints;
 import java.awt.geom.Point2D;
-import java.awt.geom.RoundRectangle2D;
-import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.function.Consumer;
 
@@ -24,6 +23,7 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
 import javax.swing.JComboBox;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -36,6 +36,7 @@ import domain.GameMode;
 import domain.MachineProfile;
 import domain.MatchConfig;
 import domain.PlayerProfile;
+import domain.PowerShot;
 import domain.StatType;
 import domain.Stats;
 
@@ -68,16 +69,18 @@ public final class SetupPanel extends JPanel {
     private final JLabel valueLabel = UiTheme.label("2", UiTheme.font(Font.BOLD, 20), UiTheme.TEXT);
     private final JLabel ruleInfo = UiTheme.label(" ", UiTheme.bodyFont(), UiTheme.MUTED);
 
-    private final JLabel leftTitle = UiTheme.label(" ", UiTheme.font(Font.BOLD, 15), UiTheme.LEFT_COLOR);
-    private final JLabel rightTitle = UiTheme.label(" ", UiTheme.font(Font.BOLD, 15), UiTheme.RIGHT_COLOR);
-    private final JLabel leftDetail = UiTheme.label(" ", UiTheme.bodyFont(), UiTheme.MUTED);
-    private final JLabel rightDetail = UiTheme.label(" ", UiTheme.bodyFont(), UiTheme.MUTED);
+    private final SectionHeader leftHeader = new SectionHeader("JUGADOR 1", UiTheme.LEFT_COLOR,
+            "Controles: A / D mover  |  W saltar  |  S patear  |  Q poder");
+    private final SectionHeader rightHeader = new SectionHeader("JUGADOR 2", UiTheme.RIGHT_COLOR,
+            "Controles: Flechas mover y saltar  |  Abajo patear  |  Ctrl derecho poder");
+    private final DetailArea leftDetail = new DetailArea();
+    private final DetailArea rightDetail = new DetailArea();
 
     private final transient ArrayList<GameCharacter> characters;
     private final ArrayList<CharacterCard> leftCards = new ArrayList<CharacterCard>();
     private final ArrayList<CharacterCard> rightCards = new ArrayList<CharacterCard>();
-    private final ArrayList<ImageButton> leftUpgrades = new ArrayList<ImageButton>();
-    private final ArrayList<ImageButton> rightUpgrades = new ArrayList<ImageButton>();
+    private final ArrayList<UpgradeRow> leftUpgrades = new ArrayList<UpgradeRow>();
+    private final ArrayList<UpgradeRow> rightUpgrades = new ArrayList<UpgradeRow>();
 
     private final JComboBox<String> machineProfileBox = new JComboBox<>(
             new String[] { MachineProfile.CLUMSY.getDisplayName(), MachineProfile.OFFENSIVE.getDisplayName(),
@@ -125,9 +128,10 @@ public final class SetupPanel extends JPanel {
         JPanel teams = new JPanel();
         teams.setOpaque(false);
         teams.setLayout(new BoxLayout(teams, BoxLayout.Y_AXIS));
-        teams.add(buildPlayerSection(leftTitle, leftCards, leftDetail, UiTheme.LEFT_COLOR, true));
-        teams.add(Box.createVerticalStrut(8));
-        teams.add(buildPlayerSection(rightTitle, rightCards, rightDetail, UiTheme.RIGHT_COLOR, false));
+        teams.setBorder(BorderFactory.createEmptyBorder(0, 24, 0, 24));
+        teams.add(buildPlayerSection(leftHeader, leftCards, leftDetail, UiTheme.LEFT_COLOR, true));
+        teams.add(Box.createVerticalStrut(10));
+        teams.add(buildPlayerSection(rightHeader, rightCards, rightDetail, UiTheme.RIGHT_COLOR, false));
 
         steps.add(buildStep("Paso 1 de 2: Configuracion del partido", buildOptions(),
                 SpriteLoader.BUTTON_BACK, "VOLVER", () -> { saveProgress(); onBack.run(); },
@@ -293,20 +297,15 @@ public final class SetupPanel extends JPanel {
     }
 
     /**
-     * Crea la seccion de un jugador: titulo, fila de tarjetas, detalle del poder y mejoras.
+     * Crea la seccion de un jugador: cabecera, fila de tarjetas y panel de detalle con mejoras.
      */
-    private JPanel buildPlayerSection(JLabel title, ArrayList<CharacterCard> cards,
-                                      JLabel detail, Color sideColor, boolean isLeft) {
-        JPanel section = new JPanel();
+    private JPanel buildPlayerSection(SectionHeader header, ArrayList<CharacterCard> cards,
+                                      DetailArea detail, Color sideColor, boolean isLeft) {
+        JPanel section = new JPanel(new BorderLayout(0, 2));
         section.setOpaque(false);
-        section.setLayout(new BoxLayout(section, BoxLayout.Y_AXIS));
+        section.add(header, BorderLayout.NORTH);
 
-        JPanel titleRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        titleRow.setOpaque(false);
-        titleRow.setMaximumSize(new Dimension(1076, 22));
-        titleRow.add(title);
-
-        JPanel cardRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 4));
+        JPanel cardRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         cardRow.setOpaque(false);
         ButtonGroup group = new ButtonGroup();
         for (GameCharacter character : characters) {
@@ -317,86 +316,257 @@ public final class SetupPanel extends JPanel {
             cardRow.add(card);
         }
 
-        JPanel detailRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        detailRow.setOpaque(false);
-        detailRow.setMaximumSize(new Dimension(1076, 22));
-        detail.setForeground(UiTheme.TEXT);
-        detailRow.add(detail);
-
-        StatsBoardPanel statsBoard = new StatsBoardPanel();
-        statsBoard.add(detailRow);
-        statsBoard.add(buildUpgradeRow(isLeft));
-
-        section.add(titleRow);
-        section.add(cardRow);
-        section.add(statsBoard);
+        JPanel body = new JPanel(new BorderLayout(4, 0));
+        body.setOpaque(false);
+        body.add(cardRow, BorderLayout.WEST);
+        body.add(buildSidePanel(detail, isLeft), BorderLayout.CENTER);
+        section.add(body, BorderLayout.CENTER);
+        section.setMaximumSize(new Dimension(Integer.MAX_VALUE, 48 + CharacterCard.HEIGHT));
         return section;
     }
 
     /**
-     * Panel que pinta el tablero de estadisticas como fondo de los detalles y las mejoras.
+     * Crea el panel compacto con el detalle del personaje elegido y las cuatro filas de mejora.
      */
-    private static final class StatsBoardPanel extends JPanel {
-        /** Ancho maximo del tablero en pixeles. */
-        private static final int BOARD_MAX_WIDTH = 1076;
-        /** Alto maximo del tablero en pixeles. */
-        private static final int BOARD_MAX_HEIGHT = 150;
-        /** Factor uniforme del 9-slice (los bordes de origen estan en SpriteLoader.STATS_BOARD_INSETS). */
-        private static final double SLICE_FACTOR = 0.25;
+    private JPanel buildSidePanel(DetailArea detail, boolean isLeft) {
+        ArrayList<UpgradeRow> rows = isLeft ? leftUpgrades : rightUpgrades;
+        SidePanel side = new SidePanel();
+        JPanel upgrades = new JPanel(new GridLayout(StatType.values().length, 1, 0, 2));
+        upgrades.setOpaque(false);
+        upgrades.setPreferredSize(new Dimension(250, 120));
+        for (StatType type : StatType.values()) {
+            UpgradeRow row = new UpgradeRow(type, isLeft);
+            rows.add(row);
+            upgrades.add(row);
+        }
+        side.add(detail, BorderLayout.CENTER);
+        side.add(upgrades, BorderLayout.EAST);
+        return side;
+    }
+
+    /**
+     * Panel a la derecha de la fila de tarjetas, pintado con el estilo azul marino y naranja del tema.
+     */
+    private static final class SidePanel extends JPanel {
+        private static final long serialVersionUID = 1L;
 
         /**
-         * Crea el panel transparente con margenes que evitan las cintas del tablero.
+         * Crea el panel transparente con margenes interiores para el contenido.
          */
-        StatsBoardPanel() {
+        SidePanel() {
+            super(new BorderLayout(16, 0));
             setOpaque(false);
-            setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-            setBorder(BorderFactory.createEmptyBorder(40, 24, 38, 24));
-            setMaximumSize(new Dimension(BOARD_MAX_WIDTH, BOARD_MAX_HEIGHT));
-            setAlignmentX(LEFT_ALIGNMENT);
+            setBorder(BorderFactory.createEmptyBorder(12, 18, 12, 18));
         }
 
         /**
-         * Pinta la imagen del tablero escalada al tamano actual o un respaldo translucido.
+         * Pinta el fondo con UiTheme.paintPanel (el 9-slice del tablero se deforma a este tamano).
          */
         @Override
         protected void paintComponent(Graphics graphics) {
             Graphics2D g2 = (Graphics2D) graphics.create();
-            BufferedImage board =
-                    SpriteLoader.nineSlice(SpriteLoader.STATS_BOARD, getWidth(), getHeight(),
-                            SpriteLoader.STATS_BOARD_INSETS, SLICE_FACTOR);
-            if (board != null) {
-                g2.drawImage(board, 0, 0, null);
-            } else {
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
-                        RenderingHints.VALUE_ANTIALIAS_ON);
-                RoundRectangle2D shape =
-                        new RoundRectangle2D.Double(0, 0, getWidth() - 1, getHeight() - 1, 18, 18);
-                g2.setColor(UiTheme.withAlpha(UiTheme.PANEL, 220));
-                g2.fill(shape);
-                g2.setColor(UiTheme.BORDER);
-                g2.draw(shape);
-            }
+            UiTheme.paintPanel(g2, 0, 0, getWidth(), getHeight(), 18, 4);
             g2.dispose();
         }
     }
 
     /**
-     * Crea la fila con un boton de mejora por cada estadistica del jugador indicado.
+     * Cabecera de un jugador: nombre a la izquierda, puntos a la derecha y controles en una linea pequena debajo.
      */
-    private JPanel buildUpgradeRow(boolean isLeft) {
-        ArrayList<ImageButton> buttons = isLeft ? leftUpgrades : rightUpgrades;
-        JPanel upgradeRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2));
-        upgradeRow.setOpaque(false);
-        upgradeRow.setMaximumSize(new Dimension(1076, 46));
-        for (StatType type : StatType.values()) {
-            ImageButton button = new ImageButton(SpriteLoader.BUTTON_CONFIRM, abbreviation(type), UiTheme.PANEL_LIGHT, true);
-            button.setFont(UiTheme.font(java.awt.Font.BOLD, 14));
-            button.setPreferredSize(new Dimension(170, 40));
-            button.addActionListener(event -> upgradeStat(isLeft ? player1 : player2, type));
-            buttons.add(button);
-            upgradeRow.add(button);
+    private static final class SectionHeader extends JComponent {
+        private static final long serialVersionUID = 1L;
+        private final String title;
+        private final Color color;
+        private final String controls;
+        private String points = "";
+
+        /**
+         * Crea la cabecera con su titulo, el color del lado y el texto de controles.
+         */
+        SectionHeader(String title, Color color, String controls) {
+            this.title = title;
+            this.color = color;
+            this.controls = controls;
+            setPreferredSize(new Dimension(100, 46));
         }
-        return upgradeRow;
+
+        /**
+         * Cambia el texto de puntos que se muestra a la derecha.
+         */
+        void setPoints(String points) {
+            this.points = points;
+            repaint();
+        }
+
+        /**
+         * Dibuja titulo, puntos y controles dentro del area disponible.
+         */
+        @Override
+        protected void paintComponent(Graphics graphics) {
+            Graphics2D g2 = (Graphics2D) graphics.create();
+            UiTheme.enableAntialiasing(g2);
+            g2.setFont(UiTheme.font(Font.BOLD, 22));
+            UiTheme.drawShadowedText(g2, title, 4, 22, color);
+            g2.setFont(UiTheme.font(Font.BOLD, 18));
+            FontMetrics metrics = g2.getFontMetrics();
+            UiTheme.drawShadowedText(g2, points, getWidth() - metrics.stringWidth(points) - 4, 22,
+                    UiTheme.GOLD_LIGHT);
+            g2.setFont(UiTheme.smallFont());
+            g2.setColor(UiTheme.MUTED);
+            g2.drawString(controls, 4, 40);
+            g2.dispose();
+        }
+    }
+
+    /**
+     * Texto con el detalle del personaje elegido: nombre, tiro, dano, efecto y descripcion.
+     */
+    private static final class DetailArea extends JComponent {
+        private static final long serialVersionUID = 1L;
+        private transient GameCharacter character;
+
+        /**
+         * Crea el area con un tamano preferido para cuatro lineas de texto.
+         */
+        DetailArea() {
+            setPreferredSize(new Dimension(280, 120));
+        }
+
+        /**
+         * Cambia el personaje que se detalla y vuelve a pintar.
+         */
+        void setCharacter(GameCharacter character) {
+            this.character = character;
+            repaint();
+        }
+
+        /**
+         * Dibuja nombre, tiro, dano con duracion y la descripcion en lineas cortas.
+         */
+        @Override
+        protected void paintComponent(Graphics graphics) {
+            if (character == null || getWidth() < 180) {
+                return;
+            }
+            Graphics2D g2 = (Graphics2D) graphics.create();
+            UiTheme.enableAntialiasing(g2);
+            PowerShot shot = character.getPowerShot();
+            g2.setFont(UiTheme.font(Font.BOLD, 18));
+            UiTheme.drawShadowedText(g2, character.getName(), 0, 18, UiTheme.TEXT_LIGHT);
+            g2.setFont(UiTheme.font(Font.BOLD, 14));
+            UiTheme.drawShadowedText(g2, "Tiro: " + shot.getName(), 0, 40, UiTheme.GOLD_LIGHT);
+            g2.setFont(UiTheme.font(Font.BOLD, 13));
+            g2.setColor(UiTheme.TEXT_LIGHT);
+            g2.drawString("Dano " + shot.getDamage() + "  |  Efecto " + formatSeconds(shot.getEffectDuration()),
+                    0, 60);
+            g2.setFont(UiTheme.font(Font.PLAIN, 12));
+            g2.setColor(UiTheme.MUTED);
+            FontMetrics metrics = g2.getFontMetrics();
+            int y = 80;
+            for (String line : wrap(UiTheme.powerDescription(shot), metrics, getWidth())) {
+                g2.drawString(line, 0, y);
+                y += 15;
+            }
+            g2.dispose();
+        }
+
+        /**
+         * Escribe los segundos sin decimales si son enteros (3 s) o con uno (1.5 s).
+         */
+        private static String formatSeconds(double seconds) {
+            if (seconds == Math.floor(seconds)) {
+                return (int) seconds + " s";
+            }
+            return seconds + " s";
+        }
+
+        /**
+         * Parte el texto en lineas que caben en el ancho indicado.
+         */
+        private static ArrayList<String> wrap(String text, FontMetrics metrics, int width) {
+            ArrayList<String> lines = new ArrayList<String>();
+            StringBuilder line = new StringBuilder();
+            for (String word : text.split(" ")) {
+                if (line.length() > 0 && metrics.stringWidth(line + " " + word) > width) {
+                    lines.add(line.toString());
+                    line.setLength(0);
+                }
+                if (line.length() > 0) {
+                    line.append(' ');
+                }
+                line.append(word);
+            }
+            if (line.length() > 0) {
+                lines.add(line.toString());
+            }
+            return lines;
+        }
+    }
+
+    /**
+     * Fila de mejora de una estadistica: nombre, nivel, costo y boton [+] (SPD  nivel 2/10  costo 50).
+     */
+    private final class UpgradeRow extends JPanel {
+        private static final long serialVersionUID = 1L;
+        private final StatType type;
+        private final JLabel levelLabel = UiTheme.label(" ", UiTheme.font(Font.PLAIN, 14), UiTheme.TEXT_LIGHT);
+        private final JLabel costLabel = UiTheme.label(" ", UiTheme.font(Font.BOLD, 14), UiTheme.GOLD_LIGHT);
+        private final ImageButton button;
+
+        /**
+         * Crea la fila de la estadistica; el boton compra la mejora del perfil del lado indicado.
+         */
+        UpgradeRow(StatType type, boolean isLeft) {
+            this.type = type;
+            setOpaque(false);
+            setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
+            JLabel name = UiTheme.label(abbreviation(type), UiTheme.font(Font.BOLD, 15), UiTheme.TEXT_LIGHT);
+            fixWidth(name, 44);
+            fixWidth(levelLabel, 92);
+            fixWidth(costLabel, 70);
+            button = new ImageButton(SpriteLoader.BUTTON_CONFIRM, "+", UiTheme.PANEL_LIGHT, false);
+            button.setPreferredSize(new Dimension(30, 30));
+            button.setToolTipText("Mejorar " + abbreviation(type));
+            button.getAccessibleContext().setAccessibleName("Mejorar " + abbreviation(type));
+            button.addActionListener(event -> upgradeStat(isLeft ? player1 : player2, type));
+            add(name);
+            add(levelLabel);
+            add(costLabel);
+            add(Box.createHorizontalGlue());
+            add(button);
+        }
+
+        /**
+         * Fija el ancho de una etiqueta para alinear las columnas de todas las filas.
+         */
+        private void fixWidth(JLabel label, int width) {
+            Dimension size = new Dimension(width, 30);
+            label.setPreferredSize(size);
+            label.setMinimumSize(size);
+            label.setMaximumSize(size);
+        }
+
+        /**
+         * Muestra nivel, costo y estado del boton segun el perfil (MAX, sin puntos o disponible).
+         */
+        void refresh(PlayerProfile profile) {
+            if (profile == null) {
+                levelLabel.setText(" ");
+                costLabel.setText(" ");
+                button.setEnabled(false);
+                return;
+            }
+            int level = profile.getStats().get(type);
+            levelLabel.setText("nivel " + level + "/" + Stats.MAX);
+            if (level >= Stats.MAX) {
+                costLabel.setText("MAX");
+                button.setEnabled(false);
+            } else {
+                int cost = profile.getUpgradeCost(type);
+                costLabel.setText("costo " + cost);
+                button.setEnabled(profile.getPoints() >= cost);
+            }
+        }
     }
 
     /**
@@ -433,27 +603,11 @@ public final class SetupPanel extends JPanel {
     }
 
     /**
-     * Actualiza el texto y la disponibilidad de los botones de mejora de un perfil.
+     * Actualiza nivel, costo y disponibilidad de las filas de mejora de un perfil.
      */
-    private void refreshUpgradeButtons(ArrayList<ImageButton> buttons, PlayerProfile profile) {
-        StatType[] types = StatType.values();
-        for (int i = 0; i < buttons.size() && i < types.length; i++) {
-            ImageButton button = buttons.get(i);
-            String abbreviation = abbreviation(types[i]);
-            if (profile == null) {
-                button.setText(abbreviation);
-                button.setEnabled(false);
-                continue;
-            }
-            int level = profile.getStats().get(types[i]);
-            if (level >= Stats.MAX) {
-                button.setText(abbreviation + " MAX");
-                button.setEnabled(false);
-            } else {
-                int cost = profile.getUpgradeCost(types[i]);
-                button.setText(abbreviation + " " + level + " (+" + cost + ")");
-                button.setEnabled(profile.getPoints() >= cost);
-            }
+    private void refreshUpgradeRows(ArrayList<UpgradeRow> rows, PlayerProfile profile) {
+        for (UpgradeRow row : rows) {
+            row.refresh(profile);
         }
     }
 
@@ -467,30 +621,13 @@ public final class SetupPanel extends JPanel {
     }
 
     /**
-     * Actualiza los titulos de cada jugador con sus puntos y estadisticas.
+     * Actualiza los puntos de cada jugador y sus filas de mejora.
      */
     public void refreshProfiles() {
-        leftTitle.setText("JUGADOR 1 (IZQUIERDA)   A / D / W / S  +  Q poder      "
-                + profileText(player1));
-        rightTitle.setText("JUGADOR 2 (DERECHA)   Flechas  +  Ctrl derecho poder      "
-                + profileText(player2));
-        refreshUpgradeButtons(leftUpgrades, player1);
-        refreshUpgradeButtons(rightUpgrades, player2);
-    }
-
-    /**
-     * Devuelve los puntos y estadisticas de un perfil en una linea.
-     */
-    private String profileText(PlayerProfile profile) {
-        if (profile == null) {
-            return "";
-        }
-        Stats stats = profile.getStats();
-        StringBuilder text = new StringBuilder("Puntos " + profile.getPoints() + "   |  ");
-        for (StatType type : StatType.values()) {
-            text.append(' ').append(abbreviation(type)).append(' ').append(stats.get(type)).append(' ');
-        }
-        return text.toString().trim();
+        leftHeader.setPoints(player1 == null ? "" : "Puntos: " + player1.getPoints());
+        rightHeader.setPoints(player2 == null ? "" : "Puntos: " + player2.getPoints());
+        refreshUpgradeRows(leftUpgrades, player1);
+        refreshUpgradeRows(rightUpgrades, player2);
     }
 
     /**
@@ -536,22 +673,11 @@ public final class SetupPanel extends JPanel {
     }
 
     /**
-     * Escribe debajo de cada fila de tarjetas que hace el tiro elegido.
+     * Actualiza el detalle del personaje elegido de cada jugador.
      */
     private void updateDetails() {
-        leftDetail.setText(detailText(selectedCharacter(leftCards)));
-        rightDetail.setText(detailText(selectedCharacter(rightCards)));
-    }
-
-    /**
-     * Devuelve el texto de detalle de un personaje: su tiro y lo que hace.
-     */
-    private String detailText(GameCharacter character) {
-        if (character == null) {
-            return " ";
-        }
-        return character.getName() + "  -  " + character.getPowerShot().getName() + ": "
-                + UiTheme.powerDescription(character.getPowerShot());
+        leftDetail.setCharacter(selectedCharacter(leftCards));
+        rightDetail.setCharacter(selectedCharacter(rightCards));
     }
 
     /**
