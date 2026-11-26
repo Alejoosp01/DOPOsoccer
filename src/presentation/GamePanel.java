@@ -87,6 +87,19 @@ public final class GamePanel extends JPanel implements ActionListener {
     /** Cuadros por segundo de la animacion del balon con tiro de poder. */
     private static final double SHOT_FPS = 12;
     private static final int VIEW_WIDTH = 1280;
+    private static final int BOARD_W = 260;
+    private static final int BOARD_H = 120;
+    private static final int BOARD_TOP = 4;
+    private static final int CLOCK_W = 110;
+    private static final int CLOCK_H = 65;
+    private static final int RIBBON_W = 200;
+    private static final int RIBBON_H = 74;
+    private static final int RIBBON_Y = 14;
+    private static final int RIBBON_GAP = 8;
+    private static final int BAR_W = 330;
+    private static final int BAR_H = 18;
+    private static final int BADGE_W = 28;
+    private static final int BADGE_H = 30;
     private static final int VIEW_HEIGHT = 720;
 
     private final transient DOPOSoccer session;
@@ -1113,6 +1126,87 @@ public final class GamePanel extends JPanel implements ActionListener {
     }
 
     private void drawHud(Graphics2D g2, Match match) {
+        BufferedImage board = SpriteLoader.scaled(SpriteLoader.SCOREBOARD_PANEL, BOARD_W, BOARD_H);
+        BufferedImage clock = SpriteLoader.scaled(SpriteLoader.CLOCK_TIMER_BAR, CLOCK_W, CLOCK_H);
+        BufferedImage blue = SpriteLoader.scaled(SpriteLoader.RIBBON_BLUE, RIBBON_W, RIBBON_H);
+        BufferedImage red = SpriteLoader.scaled(SpriteLoader.RIBBON_RED, RIBBON_W, RIBBON_H);
+        if (board != null && clock != null && blue != null && red != null) {
+            drawScoreboardImages(g2, match, board, clock, blue, red);
+        } else {
+            drawScoreboardFallback(g2, match);
+        }
+        drawPlayerPanel(g2, match.getLeftPlayer(), true);
+        drawPlayerPanel(g2, match.getRightPlayer(), false);
+        drawBottomHints(g2);
+    }
+
+    /**
+     * Dibuja el marcador, el reloj y las cintas de nombre usando las imagenes del HUD.
+     */
+    private void drawScoreboardImages(Graphics2D g2, Match match, BufferedImage board,
+                                      BufferedImage clock, BufferedImage blue, BufferedImage red) {
+        int center = VIEW_WIDTH / 2;
+        g2.drawImage(board, center - BOARD_W / 2, BOARD_TOP, null);
+        g2.setFont(UiTheme.font(Font.BOLD, 40));
+        g2.setColor(UiTheme.TEXT);
+        Score score = match.getScore();
+        drawCentered(g2, score.getLeftGoals() + " - " + score.getRightGoals(),
+                center, BOARD_TOP + BOARD_H / 2 + 14);
+
+        g2.drawImage(clock, center - CLOCK_W / 2, BOARD_TOP + BOARD_H - 8, null);
+        g2.setFont(UiTheme.font(Font.BOLD, 13));
+        if (match.isSuddenDeath()) {
+            g2.setColor(UiTheme.GOLD);
+        } else {
+            g2.setColor(UiTheme.TEXT);
+        }
+        drawCentered(g2, matchSubtitle(match), center, BOARD_TOP + BOARD_H - 8 + CLOCK_H / 2 + 6);
+
+        int leftX = center - BOARD_W / 2 - RIBBON_GAP - RIBBON_W;
+        int rightX = center + BOARD_W / 2 + RIBBON_GAP;
+        g2.drawImage(blue, leftX, RIBBON_Y, null);
+        g2.drawImage(red, rightX, RIBBON_Y, null);
+        drawRibbonName(g2, session.getLeftCharacter().getName(), leftX + RIBBON_W / 2);
+        drawRibbonName(g2, session.getRightCharacter().getName(), rightX + RIBBON_W / 2);
+        drawRibbonInfo(g2, match.getLeftPlayer(), true, leftX + RIBBON_W / 2);
+        drawRibbonInfo(g2, match.getRightPlayer(), false, rightX + RIBBON_W / 2);
+    }
+
+    /**
+     * Dibuja el nombre del jugador centrado en su cinta, reduciendo la fuente si no cabe.
+     */
+    private void drawRibbonName(Graphics2D g2, String name, int centerX) {
+        String text = name.toUpperCase();
+        int size = 16;
+        g2.setFont(UiTheme.font(Font.BOLD, size));
+        while (size > 9 && g2.getFontMetrics().stringWidth(text) > RIBBON_W - 56) {
+            size--;
+            g2.setFont(UiTheme.font(Font.BOLD, size));
+        }
+        int baseline = RIBBON_Y + RIBBON_H / 2 + 6;
+        g2.setColor(UiTheme.withAlpha(Color.BLACK, 160));
+        drawCentered(g2, text, centerX + 1, baseline + 1);
+        g2.setColor(Color.WHITE);
+        drawCentered(g2, text, centerX, baseline);
+    }
+
+    /**
+     * Dibuja bajo la cinta el rol, las estadisticas y los puntos del jugador.
+     */
+    private void drawRibbonInfo(Graphics2D g2, Player player, boolean left, int centerX) {
+        int y = RIBBON_Y + RIBBON_H + 14;
+        g2.setFont(UiTheme.font(Font.PLAIN, 12));
+        g2.setColor(UiTheme.MUTED);
+        drawCentered(g2, roleLabel(left), centerX, y);
+        g2.setFont(UiTheme.font(Font.PLAIN, 11));
+        drawCentered(g2, statsLabel(player), centerX, y + 15);
+        drawCentered(g2, "Puntos " + player.getProfile().getPoints(), centerX, y + 29);
+    }
+
+    /**
+     * Dibuja el marcador sin imagenes (respaldo cuando los recursos no cargan).
+     */
+    private void drawScoreboardFallback(Graphics2D g2, Match match) {
         Score score = match.getScore();
         int boardWidth = 620;
         int boardHeight = 96;
@@ -1158,10 +1252,6 @@ public final class GamePanel extends JPanel implements ActionListener {
         g2.drawString("Puntos " + match.getLeftPlayer().getProfile().getPoints(), boardX + 22, boardY + 86);
         drawRight(g2, "Puntos " + match.getRightPlayer().getProfile().getPoints(),
                 boardX + boardWidth - 22, boardY + 86);
-
-        drawPlayerPanel(g2, match.getLeftPlayer(), true);
-        drawPlayerPanel(g2, match.getRightPlayer(), false);
-        drawBottomHints(g2);
     }
 
     /**
