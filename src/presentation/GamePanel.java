@@ -1324,9 +1324,17 @@ public final class GamePanel extends JPanel implements ActionListener {
         if (life < 0.3) {
             lifeColor = UiTheme.DANGER;
         }
-        drawBar(g2, x, 666, width, life, lifeColor,
-                "VIDA  " + (int) Math.ceil(player.getLife()) + " / " + (int) player.getMaxLife(),
-                UiTheme.TEXT);
+        String lifeText = "VIDA  " + (int) Math.ceil(player.getLife()) + " / " + (int) player.getMaxLife();
+        BufferedImage lifeImage = SpriteLoader.scaled(SpriteLoader.LIFE_BAR, BAR_W, BAR_H);
+        if (lifeImage != null) {
+            Color border = null;
+            if (life < 0.3) {
+                border = UiTheme.DANGER;
+            }
+            drawImageBar(g2, x, 666, life, lifeImage, lifeText, border);
+        } else {
+            drawBar(g2, x, 666, width, life, lifeColor, lifeText, UiTheme.TEXT);
+        }
 
         double charge = player.getPowerBar().getCharge();
         Color powerColor = sideColor;
@@ -1335,7 +1343,83 @@ public final class GamePanel extends JPanel implements ActionListener {
             powerColor = UiTheme.GOLD;
             textColor = UiTheme.BG_TOP;
         }
-        drawBar(g2, x, 690, width, charge, powerColor, powerLabel(player, left), textColor);
+        BufferedImage powerImage = SpriteLoader.scaled(SpriteLoader.POWER_BAR, BAR_W, BAR_H);
+        if (powerImage != null) {
+            Color border = null;
+            if (player.getPowerBar().isFull()) {
+                border = UiTheme.GOLD;
+            }
+            drawImageBar(g2, x, 690, charge, powerImage, powerLabel(player, left), border);
+        } else {
+            drawBar(g2, x, 690, width, charge, powerColor, powerLabel(player, left), textColor);
+        }
+        drawBadges(g2, player, x, left);
+    }
+
+    /**
+     * Dibuja una barra con fondo oscuro y la imagen recortada segun el relleno (0 a 1).
+     */
+    private void drawImageBar(Graphics2D g2, int x, int y, double fill, BufferedImage image,
+                              String text, Color border) {
+        g2.setColor(UiTheme.withAlpha(UiTheme.PANEL, 235));
+        g2.fill(new RoundRectangle2D.Double(x, y, BAR_W, BAR_H, 12, 12));
+        double amount = Math.max(0, Math.min(1, fill));
+        Shape oldClip = g2.getClip();
+        g2.clipRect(x, y, (int) Math.round(BAR_W * amount), BAR_H);
+        g2.drawImage(image, x, y, null);
+        g2.setClip(oldClip);
+        if (border != null) {
+            g2.setColor(border);
+            g2.setStroke(new BasicStroke(2.5f));
+        } else {
+            g2.setColor(UiTheme.withAlpha(UiTheme.BORDER, 230));
+            g2.setStroke(new BasicStroke(1.5f));
+        }
+        g2.draw(new RoundRectangle2D.Double(x, y, BAR_W, BAR_H, 12, 12));
+        g2.setFont(UiTheme.font(Font.BOLD, 11));
+        g2.setColor(UiTheme.withAlpha(Color.BLACK, 170));
+        drawCentered(g2, text, x + BAR_W / 2 + 1, y + 14);
+        g2.setColor(UiTheme.TEXT);
+        drawCentered(g2, text, x + BAR_W / 2, y + 13);
+    }
+
+    /**
+     * Dibuja junto al panel las insignias de poder listo/aura y de electrocucion o aturdimiento.
+     */
+    private void drawBadges(Graphics2D g2, Player player, int panelX, boolean left) {
+        boolean fire = player.hasAura() || player.getPowerBar().isFull();
+        Effect effect = player.getEffect();
+        boolean bolt = player.isStunned()
+                || (effect != null && "Electrocutado".equals(effect.getName()));
+        int step = BADGE_W + 4;
+        int slot = 0;
+        if (fire) {
+            drawBadge(g2, SpriteLoader.BADGE_FIRE, badgeX(panelX, left, slot, step), 672);
+            slot++;
+        }
+        if (bolt) {
+            drawBadge(g2, SpriteLoader.BADGE_BOLT, badgeX(panelX, left, slot, step), 672);
+        }
+    }
+
+    /**
+     * Devuelve la coordenada x de la insignia numero slot, hacia afuera del panel.
+     */
+    private int badgeX(int panelX, boolean left, int slot, int step) {
+        if (left) {
+            return panelX + BAR_W + 6 + slot * step;
+        }
+        return panelX - 6 - BADGE_W - slot * step;
+    }
+
+    /**
+     * Dibuja una insignia si su imagen carga.
+     */
+    private void drawBadge(Graphics2D g2, String path, int x, int y) {
+        BufferedImage badge = SpriteLoader.scaled(path, BADGE_W, BADGE_H);
+        if (badge != null) {
+            g2.drawImage(badge, x, y, null);
+        }
     }
 
     /**
