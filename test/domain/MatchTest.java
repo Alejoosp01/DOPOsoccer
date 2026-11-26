@@ -239,6 +239,25 @@ public class MatchTest {
     }
 
     @Test
+    public void shouldFirePowerShotWhenKickingBallWithinKickReach() {
+        match.start();
+        TestData.fillPowerBar(left);
+        match.activatePower(Side.LEFT);
+        left.setPosition(320, groundCenter);
+        right.setPosition(900, groundCenter);
+        double distance = Player.WIDTH / 2 + Field.BALL_RADIUS + Player.KICK_REACH - 10;
+        match.getBall().setPosition(320 + distance, groundCenter + 40);
+        match.getBall().setVelocity(0, 0);
+        assertFalse(left.touchesBall(match.getBall()));
+
+        assertTrue(match.kick(Side.LEFT));
+
+        assertFalse(left.hasAura());
+        assertTrue(match.getBall().hasActiveShot());
+        assertSame(left, match.getBall().getShotOwner());
+    }
+
+    @Test
     public void shouldDamageAndAffectRivalHitByPowerShot() {
         match.start();
         right.setPosition(900, groundCenter);
