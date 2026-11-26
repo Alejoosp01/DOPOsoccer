@@ -56,7 +56,7 @@ public final class MainMenuPanel extends JPanel {
         buttons.setOpaque(false);
         buttons.setLayout(new BoxLayout(buttons, BoxLayout.Y_AXIS));
 
-        MenuButton play = new MenuButton("JUGAR", UiTheme.ACCENT);
+        ImageButton play = new ImageButton(SpriteLoader.BUTTON_PLAY, "JUGAR", UiTheme.ACCENT);
         play.setAlignmentX(CENTER_ALIGNMENT);
         play.setMaximumSize(new Dimension(300, 54));
         play.addActionListener(event -> onPlay.run());
@@ -67,8 +67,7 @@ public final class MainMenuPanel extends JPanel {
         open.setMaximumSize(new Dimension(300, 54));
         open.addActionListener(event -> onOpen.run());
 
-        MenuButton how = new MenuButton("COMO JUGAR", UiTheme.PANEL_LIGHT);
-        how.setForeground(UiTheme.TEXT);
+        ImageButton how = new ImageButton(SpriteLoader.BUTTON_SETTINGS, "COMO JUGAR", UiTheme.PANEL_LIGHT);
         how.setAlignmentX(CENTER_ALIGNMENT);
         how.setMaximumSize(new Dimension(300, 54));
         how.addActionListener(event -> showHelp());

@@ -73,8 +73,8 @@ public final class SetupPanel extends JPanel {
     private final transient ArrayList<GameCharacter> characters;
     private final ArrayList<CharacterCard> leftCards = new ArrayList<CharacterCard>();
     private final ArrayList<CharacterCard> rightCards = new ArrayList<CharacterCard>();
-    private final ArrayList<MenuButton> leftUpgrades = new ArrayList<MenuButton>();
-    private final ArrayList<MenuButton> rightUpgrades = new ArrayList<MenuButton>();
+    private final ArrayList<ImageButton> leftUpgrades = new ArrayList<ImageButton>();
+    private final ArrayList<ImageButton> rightUpgrades = new ArrayList<ImageButton>();
 
     private final JComboBox<String> machineProfileBox = new JComboBox<>(
             new String[] { MachineProfile.CLUMSY.getDisplayName(), MachineProfile.OFFENSIVE.getDisplayName(),
@@ -127,11 +127,11 @@ public final class SetupPanel extends JPanel {
         teams.add(buildPlayerSection(rightTitle, rightCards, rightDetail, UiTheme.RIGHT_COLOR, false));
 
         steps.add(buildStep("Paso 1 de 2: Configuracion del partido", buildOptions(),
-                "VOLVER", () -> { saveProgress(); onBack.run(); },
-                "SIGUIENTE", () -> stepLayout.show(steps, STEP_TEAMS)), STEP_CONFIG);
+                SpriteLoader.BUTTON_BACK, "VOLVER", () -> { saveProgress(); onBack.run(); },
+                SpriteLoader.BUTTON_FORWARD, "SIGUIENTE", () -> stepLayout.show(steps, STEP_TEAMS)), STEP_CONFIG);
         steps.add(buildStep("Paso 2 de 2: Seleccion de equipos", teams,
-                "ATRAS", () -> { saveProgress(); showFirstStep(); },
-                "COMENZAR", () -> startGame()), STEP_TEAMS);
+                SpriteLoader.BUTTON_BACK, "ATRAS", () -> { saveProgress(); showFirstStep(); },
+                SpriteLoader.BUTTON_PLAY, "COMENZAR", () -> startGame()), STEP_TEAMS);
         add(steps, BorderLayout.CENTER);
 
         selectCard(leftCards, 0);
@@ -150,8 +150,8 @@ public final class SetupPanel extends JPanel {
     /**
      * Crea un paso con titulo, contenido central y dos botones inferiores.
      */
-    private JPanel buildStep(String titleText, JPanel body, String leftText, Runnable leftAction,
-                             String rightText, Runnable rightAction) {
+    private JPanel buildStep(String titleText, JPanel body, String leftImage, String leftText, Runnable leftAction,
+                             String rightImage, String rightText, Runnable rightAction) {
         JPanel step = new JPanel(new BorderLayout());
         step.setOpaque(false);
         JPanel header = new JPanel();
@@ -166,10 +166,10 @@ public final class SetupPanel extends JPanel {
 
         JPanel footer = new JPanel(new FlowLayout(FlowLayout.CENTER, 18, 10));
         footer.setOpaque(false);
-        MenuButton left = new MenuButton(leftText, UiTheme.PANEL_LIGHT);
+        ImageButton left = new ImageButton(leftImage, leftText, UiTheme.PANEL_LIGHT);
         left.setForeground(UiTheme.TEXT);
         left.addActionListener(event -> leftAction.run());
-        MenuButton right = new MenuButton(rightText, UiTheme.ACCENT);
+        ImageButton right = new ImageButton(rightImage, rightText, UiTheme.ACCENT);
         right.addActionListener(event -> rightAction.run());
         footer.add(left);
         footer.add(right);
@@ -330,15 +330,14 @@ public final class SetupPanel extends JPanel {
      * Crea la fila con un boton de mejora por cada estadistica del jugador indicado.
      */
     private JPanel buildUpgradeRow(boolean isLeft) {
-        ArrayList<MenuButton> buttons = isLeft ? leftUpgrades : rightUpgrades;
+        ArrayList<ImageButton> buttons = isLeft ? leftUpgrades : rightUpgrades;
         JPanel upgradeRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2));
         upgradeRow.setOpaque(false);
-        upgradeRow.setMaximumSize(new Dimension(1076, 36));
+        upgradeRow.setMaximumSize(new Dimension(1076, 46));
         for (StatType type : StatType.values()) {
-            MenuButton button = new MenuButton(abbreviation(type), UiTheme.PANEL_LIGHT);
-            button.setForeground(UiTheme.TEXT);
-            button.setPreferredSize(new Dimension(150, 28));
-            button.setBorder(BorderFactory.createEmptyBorder(2, 2, 2, 2));
+            ImageButton button = new ImageButton(SpriteLoader.BUTTON_CONFIRM, abbreviation(type), UiTheme.PANEL_LIGHT, true);
+            button.setFont(UiTheme.font(java.awt.Font.BOLD, 14));
+            button.setPreferredSize(new Dimension(170, 40));
             button.addActionListener(event -> upgradeStat(isLeft ? player1 : player2, type));
             buttons.add(button);
             upgradeRow.add(button);
@@ -382,10 +381,10 @@ public final class SetupPanel extends JPanel {
     /**
      * Actualiza el texto y la disponibilidad de los botones de mejora de un perfil.
      */
-    private void refreshUpgradeButtons(ArrayList<MenuButton> buttons, PlayerProfile profile) {
+    private void refreshUpgradeButtons(ArrayList<ImageButton> buttons, PlayerProfile profile) {
         StatType[] types = StatType.values();
         for (int i = 0; i < buttons.size() && i < types.length; i++) {
-            MenuButton button = buttons.get(i);
+            ImageButton button = buttons.get(i);
             String abbreviation = abbreviation(types[i]);
             if (profile == null) {
                 button.setText(abbreviation);

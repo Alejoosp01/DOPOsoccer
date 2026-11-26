@@ -47,7 +47,7 @@ public final class HelpDialog extends JDialog {
 
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.CENTER));
         buttons.setOpaque(false);
-        MenuButton close = new MenuButton("ENTENDIDO", UiTheme.ACCENT);
+        ImageButton close = new ImageButton(SpriteLoader.BUTTON_CONFIRM, "ENTENDIDO", UiTheme.ACCENT);
         close.addActionListener(event -> dispose());
         buttons.add(close);
         content.add(buttons, BorderLayout.SOUTH);
