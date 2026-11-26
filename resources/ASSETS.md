@@ -51,24 +51,55 @@ resources/
 
 ## Balón, tiros, cancha e interfaz (ya conectados en el juego)
 
-- `sprites/ball/roll_1..6.png` y `kick_1..6.png`: balón normal. El juego usa
-  `roll_1` y lo gira según lo que rueda.
-- `sprites/shots/<tiro>/charge_N`, `fly_N`, `impact_N` (el tornado además tiene
-  `bounce_N`): `blue_aura`, `lightning`, `tornado` e `illusion`. Mientras hay un
-  tiro activo se repite `fly`; los balones falsos de la Ilusión usan los mismos
-  cuadros.
+Todas las imágenes pasan por `SpriteLoader`, que las lee del classpath una sola
+vez y guarda en caché también las versiones escaladas (y en 9-slice), así que
+nunca se escala dentro de `paintComponent`. Si una imagen falta, se registra
+una vez y quien dibuja usa su respaldo en Java2D (`ImageButton` cae a
+`MenuButton`, `HudButton` muestra texto, las insignias se omiten).
+
+- `sprites/ball/roll_1..6.png`: balón rodando (`GamePanel`).
+- `sprites/ball/kick_1..6.png`: animación corta del balón al ser pateado.
+- `sprites/shots/<tiro>/…` (`blue_aura`, `lightning`, `tornado`, `illusion`):
+  `charge_N` se reproduce una vez al iniciar el tiro, `fly_N` se repite mientras
+  el tiro está activo, `impact_N` se reproduce sobre el balón al impactar y
+  `tornado/bounce_N` al rebotar el tornado. Los balones falsos de la Ilusión
+  usan los mismos cuadros.
+- `sprites/characters/<pais>/<accion>_N`: animaciones de los jugadores
+  (`PlayerAnimation`).
 - Cuadros del balón: de 256x256, con el balón de 96 px en el centro. El juego
   los escala al diámetro real del balón (36).
 - `field/background.png`: cancha del partido (de `campo 2.jpeg`), a 1280x720.
 - `field/stadium.png`: fondo del menú (de `campo.jpeg`).
 - `field/goal.png`: arco de un solo lado (es el derecho; el izquierdo se
   voltea). Se dibuja 1.4 veces más ancho que la zona de gol.
-- `ui/hud/`: `goal_banner` (al marcar) y `confetti_burst` (al ganar) están en
-  uso. `life_bar` y `power_bar` traen el relleno pintado, así que para
-  usarlas habría que tener la barra vacía. `scoreboard_panel`, `stats_board`,
-  `clock_timer_bar`, cintas e insignias están disponibles.
-- `ui/buttons/<nombre>_normal.png` y `_pressed.png`: botones (back, confirm,
-  forward, home, music, pause, play, restart, settings, sound y trophy).
+- `ui/hud/` en el partido (`GamePanel`):
+  - `scoreboard_panel`: fondo del marcador.
+  - `clock_timer_bar`: fondo del tiempo restante o de la meta de goles.
+  - `ribbon_blue` / `ribbon_red`: cinta con el nombre del jugador izquierdo y
+    derecho.
+  - `life_bar` / `power_bar`: traen el relleno pintado, así que se dibuja un
+    fondo oscuro y encima la imagen recortada horizontalmente según el
+    porcentaje de vida o de poder.
+  - `badge_fire`: aura activa o barra de poder llena. `badge_bolt`: jugador
+    aturdido o electrocutado.
+  - `goal_banner` (al marcar) y `confetti_burst` (al ganar, a ambos lados).
+- `ui/hud/stats_board`: fondo en 9-slice del panel de mejoras del paso 2
+  (`SetupPanel`) y fondo de la pantalla de fin de partido.
+- `ui/buttons/<nombre>_normal.png` y `_pressed.png` (vía `ImageButton` y
+  `HudButton`, ambas escaladas al mismo tamaño):
+  - `play`: JUGAR (menú) y COMENZAR (paso 2).
+  - `settings`: CÓMO JUGAR (abre `HelpDialog`).
+  - `confirm`: ENTENDIDO en la ayuda y comprar mejora en el paso 2.
+  - `back` / `forward`: volver y siguiente entre menú, paso 1 y paso 2.
+  - `pause`: pausar y reanudar. `home`: volver al menú (`M`).
+  - `restart`: revancha. `trophy`: ícono del resultado final.
+
+### Disponibles pero sin usar
+
+- `ui/buttons/sound_*` y `music_*`: el juego no tiene audio.
+- `ui/hud/badge_shield.png`: no hay un efecto de defensa en el dominio.
+- `ui/icons/`, `ui/flags/`, `fonts/` y `sprites/effects/`: carpetas vacías
+  (solo `.gitkeep`).
 - Los JPEG originales venían con fondo magenta (balones) o blanco (arco). Se
   recortaron quitando ese color y dividiendo cada hoja en cuadros iguales
   (6 columnas por fila).
