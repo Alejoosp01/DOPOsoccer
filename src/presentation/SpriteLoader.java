@@ -168,6 +168,27 @@ public final class SpriteLoader {
     }
 
     /**
+     * Pinta el fondo del estadio con su velo azul, o el degradado del tema si falta la imagen.
+     */
+    public static void paintStadiumBackground(Graphics2D g2, int width, int height) {
+        BufferedImage stadium = scaled(STADIUM, width, height);
+        if (stadium != null) {
+            g2.drawImage(stadium, 0, 0, null);
+            g2.setColor(UiTheme.withAlpha(UiTheme.BG_TOP, 150));
+            g2.fillRect(0, 0, width, height);
+            return;
+        }
+        UiTheme.paintVerticalGradient(g2, width, height, UiTheme.BG_TOP, UiTheme.BG_BOTTOM);
+        g2.setPaint(new java.awt.RadialGradientPaint(
+                new java.awt.geom.Point2D.Double(width / 2.0, -80),
+                Math.max(width * 0.7f, 400),
+                new float[] {0f, 1f},
+                new java.awt.Color[] {UiTheme.withAlpha(UiTheme.ACCENT, 70),
+                        UiTheme.withAlpha(UiTheme.ACCENT, 0)}));
+        g2.fillRect(0, 0, width, height);
+    }
+
+    /**
      * Devuelve la imagen escalada en 9 partes con esquinas sin deformar, en cache.
      */
     public static BufferedImage nineSlice(String path, int width, int height,

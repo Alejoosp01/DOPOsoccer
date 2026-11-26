@@ -4,8 +4,6 @@ import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.RadialGradientPaint;
-import java.awt.geom.Point2D;
 
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -112,31 +110,7 @@ public final class MainMenuPanel extends JPanel {
         super.paintComponent(graphics);
         Graphics2D g2 = (Graphics2D) graphics.create();
         UiTheme.enableAntialiasing(g2);
-        java.awt.image.BufferedImage stadium = SpriteLoader.load(SpriteLoader.STADIUM);
-        if (stadium != null) {
-            SpriteLoader.draw(g2, stadium, 0, 0, getWidth(), getHeight(), false);
-            g2.setColor(UiTheme.withAlpha(UiTheme.BG_TOP, 150));
-            g2.fillRect(0, 0, getWidth(), getHeight());
-            g2.dispose();
-            return;
-        }
-        UiTheme.paintVerticalGradient(g2, getWidth(), getHeight(),
-                UiTheme.BG_TOP, UiTheme.BG_BOTTOM);
-
-        g2.setPaint(new RadialGradientPaint(
-                new Point2D.Double(getWidth() / 2.0, -80),
-                Math.max(getWidth() * 0.7f, 400),
-                new float[] {0f, 1f},
-                new java.awt.Color[] {UiTheme.withAlpha(UiTheme.ACCENT, 70),
-                        UiTheme.withAlpha(UiTheme.ACCENT, 0)}));
-        g2.fillRect(0, 0, getWidth(), getHeight());
-
-        g2.setColor(UiTheme.withAlpha(UiTheme.ACCENT, 28));
-        g2.fillOval(getWidth() / 2 - 210, 150, 420, 420);
-        g2.setColor(UiTheme.withAlpha(UiTheme.RIGHT_COLOR, 18));
-        g2.fillOval(-160, 360, 520, 520);
-        g2.setColor(UiTheme.withAlpha(UiTheme.LEFT_COLOR, 18));
-        g2.fillOval(getWidth() - 360, 380, 520, 520);
+        SpriteLoader.paintStadiumBackground(g2, getWidth(), getHeight());
         g2.dispose();
     }
 

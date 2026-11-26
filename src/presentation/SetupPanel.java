@@ -13,8 +13,6 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
-import java.awt.RadialGradientPaint;
-import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.function.Consumer;
 
@@ -826,28 +824,14 @@ public final class SetupPanel extends JPanel {
     }
 
     /**
-     * Pinta el fondo con el degradado y los circulos decorativos del tema.
+     * Pinta el fondo del estadio, el mismo del menu principal.
      */
     @Override
     protected void paintComponent(Graphics graphics) {
         super.paintComponent(graphics);
         Graphics2D g2 = (Graphics2D) graphics.create();
         UiTheme.enableAntialiasing(g2);
-        UiTheme.paintVerticalGradient(g2, getWidth(), getHeight(),
-                UiTheme.BG_TOP, UiTheme.BG_BOTTOM);
-
-        g2.setPaint(new RadialGradientPaint(
-                new Point2D.Double(getWidth() / 2.0, getHeight() + 120),
-                Math.max(getWidth() * 0.6f, 420),
-                new float[] {0f, 1f},
-                new Color[] {UiTheme.withAlpha(UiTheme.RIGHT_COLOR, 45),
-                        UiTheme.withAlpha(UiTheme.RIGHT_COLOR, 0)}));
-        g2.fillRect(0, 0, getWidth(), getHeight());
-
-        g2.setColor(UiTheme.withAlpha(UiTheme.ORANGE, 22));
-        g2.fillOval(-180, -220, 620, 620);
-        g2.setColor(UiTheme.withAlpha(UiTheme.LEFT_COLOR, 16));
-        g2.fillOval(getWidth() - 420, 160, 620, 620);
+        SpriteLoader.paintStadiumBackground(g2, getWidth(), getHeight());
         g2.dispose();
     }
 }
