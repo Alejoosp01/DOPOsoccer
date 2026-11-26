@@ -1425,6 +1425,9 @@ public final class GamePanel extends JPanel implements ActionListener {
             human = rightHuman();
         }
         if (human == null) {
+            if (session.getMachineProfile() != null) {
+                return "MAQUINA " + session.getMachineProfile().getDisplayName().toUpperCase();
+            }
             return "MAQUINA";
         }
         if (left) {
