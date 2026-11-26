@@ -7,6 +7,7 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
 
+import javax.swing.AbstractButton;
 import javax.swing.JButton;
 
 /**
@@ -34,21 +35,28 @@ public final class MenuButton extends JButton {
     @Override
     protected void paintComponent(Graphics graphics) {
         Graphics2D g2 = (Graphics2D) graphics.create();
+        paintFallback(g2, this, baseColor);
+        g2.dispose();
+        super.paintComponent(graphics);
+    }
+
+    /**
+     * Dibuja el fondo redondeado del boton segun su estado (normal, presionado, hover o deshabilitado).
+     */
+    static void paintFallback(Graphics2D g2, AbstractButton button, Color baseColor) {
         UiTheme.enableAntialiasing(g2);
         Color color = baseColor;
-        if (!isEnabled()) {
+        if (!button.isEnabled()) {
             color = UiTheme.BORDER;
-        } else if (getModel().isPressed()) {
+        } else if (button.getModel().isPressed()) {
             color = UiTheme.darken(baseColor, 0.25f);
-        } else if (getModel().isRollover()) {
+        } else if (button.getModel().isRollover()) {
             color = UiTheme.lighten(baseColor, 0.18f);
         }
         g2.setColor(color);
-        g2.fillRoundRect(0, 0, getWidth(), getHeight(), 18, 18);
+        g2.fillRoundRect(0, 0, button.getWidth(), button.getHeight(), 18, 18);
         g2.setColor(UiTheme.withAlpha(Color.WHITE, 40));
-        g2.drawRoundRect(1, 1, getWidth() - 3, getHeight() - 3, 18, 18);
-        g2.dispose();
-        super.paintComponent(graphics);
+        g2.drawRoundRect(1, 1, button.getWidth() - 3, button.getHeight() - 3, 18, 18);
     }
 
     @Override
