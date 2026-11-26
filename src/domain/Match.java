@@ -18,6 +18,8 @@ public class Match implements Serializable {
     public static final double SQUEEZE_SIDE_SPEED = 260;
     public static final double SQUEEZE_MARGIN = 2;
     public static final double HEADER_FORWARD_SPEED = 180;
+    /** Rapidez de alejamiento desde la cual un toque lateral es conduccion y ya no levanta el balon. */
+    public static final double DRIBBLE_SPEED = Player.TOUCH_SPEED / 2;
 
     private final MatchConfig config;
     private final Field field;
@@ -496,6 +498,8 @@ public class Match implements Serializable {
         double relativeX = ball.getVelocityX() - player.getVelocityX();
         double relativeY = ball.getVelocityY() - player.getVelocityY();
         double along = relativeX * normalX + relativeY * normalY;
+        // Rapidez con que el balon ya se alejaba del jugador antes del toque (sin restar al jugador).
+        double leavingSpeed = ball.getVelocityX() * normalX + ball.getVelocityY() * normalY;
         if (along < Player.TOUCH_SPEED) {
             double bounce = Math.max(-along * Ball.RESTITUTION, Player.TOUCH_SPEED);
             double change = bounce - along;
@@ -510,7 +514,8 @@ public class Match implements Serializable {
             double side = sideOf(ball.getX() - player.getX(), player.getAttackDirection());
             velocityX = side * HEADER_FORWARD_SPEED;
         }
-        if (Math.abs(normalX) > 0.7) {
+        // Si el balon ya iba conducido (se alejaba rapido) no se levanta, solo se acompana.
+        if (Math.abs(normalX) > 0.7 && leavingSpeed < DRIBBLE_SPEED) {
             velocityY = Math.min(velocityY, -Player.TOUCH_LIFT);
         }
         ball.setVelocity(velocityX, velocityY);
