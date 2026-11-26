@@ -98,7 +98,7 @@ public final class MainMenuPanel extends JPanel {
         JPanel footer = new JPanel(new BorderLayout());
         footer.setOpaque(false);
         javax.swing.JLabel hint = UiTheme.label(
-                "PvsP, PvsM y MvsM",
+                "PvsP y PvsM",
                 UiTheme.bodyFont(), UiTheme.MUTED);
         hint.setHorizontalAlignment(SwingConstants.CENTER);
         footer.add(hint, BorderLayout.CENTER);
