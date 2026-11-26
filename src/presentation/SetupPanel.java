@@ -14,13 +14,13 @@ import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.function.Consumer;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
-import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -80,9 +80,10 @@ public final class SetupPanel extends JPanel {
     private final ArrayList<UpgradeRow> leftUpgrades = new ArrayList<UpgradeRow>();
     private final ArrayList<UpgradeRow> rightUpgrades = new ArrayList<UpgradeRow>();
 
-    private final JComboBox<String> machineProfileBox = new JComboBox<>(
-            new String[] { MachineProfile.CLUMSY.getDisplayName(), MachineProfile.OFFENSIVE.getDisplayName(),
-                    MachineProfile.DEFENSIVE.getDisplayName(), MachineProfile.EXPERT.getDisplayName() });
+    private final EnumMap<MachineProfile, ChoiceChip> machineChips = new EnumMap<>(MachineProfile.class);
+    private final EnumMap<MachineProfile, String> machineDescriptions = new EnumMap<>(MachineProfile.class);
+    private final JLabel machineLabel = UiTheme.label("Maquina", UiTheme.subtitleFont(), UiTheme.TEXT);
+    private final JLabel machineInfo = UiTheme.label(" ", UiTheme.bodyFont(), UiTheme.MUTED);
 
     private static final String STEP_CONFIG = "config";
     private static final String STEP_TEAMS = "teams";
@@ -284,8 +285,9 @@ public final class SetupPanel extends JPanel {
         JPanel modeRow = row();
         modeRow.add(pvpOption);
         modeRow.add(pvmOption);
-        modeRow.add(machineProfileBox);
-        machineProfileBox.setSelectedItem(MatchConfig.DEFAULT_MACHINE.getDisplayName());
+        JPanel machineRow = buildMachineRow();
+        JPanel machineInfoRow = row();
+        machineInfoRow.add(machineInfo);
         updateMachineProfileVisibility();
         pvmOption.addActionListener(event -> updateMachineProfileVisibility());
         pvpOption.addActionListener(event -> updateMachineProfileVisibility());
@@ -300,9 +302,11 @@ public final class SetupPanel extends JPanel {
         JPanel options = new JPanel(new GridBagLayout());
         options.setOpaque(false);
         addOptionRow(options, 0, UiTheme.label("Modalidad", UiTheme.subtitleFont(), UiTheme.TEXT), modeRow);
-        addOptionRow(options, 1, UiTheme.label("Tipo de partido", UiTheme.subtitleFont(), UiTheme.TEXT), typeRow);
-        addOptionRow(options, 2, ruleLabel, valueRow);
-        addOptionRow(options, 3, UiTheme.label("Resolucion", UiTheme.subtitleFont(), UiTheme.TEXT), resolutionRow);
+        addOptionRow(options, 1, machineLabel, machineRow);
+        addOptionRow(options, 2, UiTheme.label(" ", UiTheme.subtitleFont(), UiTheme.TEXT), machineInfoRow);
+        addOptionRow(options, 3, UiTheme.label("Tipo de partido", UiTheme.subtitleFont(), UiTheme.TEXT), typeRow);
+        addOptionRow(options, 4, ruleLabel, valueRow);
+        addOptionRow(options, 5, UiTheme.label("Resolucion", UiTheme.subtitleFont(), UiTheme.TEXT), resolutionRow);
 
         JPanel wrapper = new JPanel(new GridBagLayout());
         wrapper.setBorder(BorderFactory.createEmptyBorder(8, 0, 8, 0));
@@ -312,10 +316,39 @@ public final class SetupPanel extends JPanel {
     }
 
     /**
-     * Muestra el selector de perfil de la maquina solo cuando la modalidad es Jugador vs Maquina.
+     * Crea la fila de chips de perfil de maquina y registra la descripcion de cada perfil.
+     */
+    private JPanel buildMachineRow() {
+        machineDescriptions.put(MachineProfile.CLUMSY, "Reacciona lento y se mueve, salta y patea al azar.");
+        machineDescriptions.put(MachineProfile.OFFENSIVE,
+                "Reacciona rapido y siempre se pone detras del balon para atacar.");
+        machineDescriptions.put(MachineProfile.DEFENSIVE,
+                "Cuida su arco: solo sale a atacar si el balon entra en su mitad.");
+        machineDescriptions.put(MachineProfile.EXPERT,
+                "La mas rapida: ataca si va perdiendo y defiende si va ganando.");
+        ButtonGroup machineGroup = new ButtonGroup();
+        JPanel machineRow = row();
+        for (MachineProfile profile : MachineProfile.values()) {
+            ChoiceChip chip = new ChoiceChip(profile.getDisplayName());
+            chip.addActionListener(event -> updateMachineProfileVisibility());
+            machineGroup.add(chip);
+            machineChips.put(profile, chip);
+            machineRow.add(chip);
+        }
+        machineChips.get(MatchConfig.DEFAULT_MACHINE).setSelected(true);
+        return machineRow;
+    }
+
+    /**
+     * Muestra el perfil de la maquina solo en Jugador vs Maquina, sin mover el resto de la pantalla.
      */
     private void updateMachineProfileVisibility() {
-        machineProfileBox.setVisible(pvmOption.isSelected());
+        boolean visible = pvmOption.isSelected();
+        for (ChoiceChip chip : machineChips.values()) {
+            chip.setVisible(visible);
+        }
+        machineLabel.setText(visible ? "Maquina" : " ");
+        machineInfo.setText(visible ? machineDescriptions.get(selectedMachineProfile()) : " ");
         revalidate();
         repaint();
     }
@@ -832,16 +865,13 @@ public final class SetupPanel extends JPanel {
     }
 
     /**
-     * Devuelve el perfil de maquina elegido en el selector (o el default si no se eligió).
+     * Devuelve el perfil de maquina del chip seleccionado (o el default si no hay ninguno).
      */
     private MachineProfile selectedMachineProfile() {
-        Object selected = machineProfileBox.getSelectedItem();
-        if (selected instanceof String) {
-            String name = (String) selected;
-            for (MachineProfile profile : MachineProfile.values()) {
-                if (profile.getDisplayName().equals(name)) {
-                    return profile;
-                }
+        for (MachineProfile profile : MachineProfile.values()) {
+            ChoiceChip chip = machineChips.get(profile);
+            if (chip != null && chip.isSelected()) {
+                return profile;
             }
         }
         return MatchConfig.DEFAULT_MACHINE;
