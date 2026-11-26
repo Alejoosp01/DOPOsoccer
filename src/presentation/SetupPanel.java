@@ -49,6 +49,7 @@ public final class SetupPanel extends JPanel {
 
     private final transient Consumer<GameSetup> onStart;
     private final transient Runnable onBack;
+    private final transient Runnable onProgressChanged;
     private transient PlayerProfile player1;
     private transient PlayerProfile player2;
 
@@ -87,10 +88,11 @@ public final class SetupPanel extends JPanel {
     private int minutes = DEFAULT_MINUTES;
     private int goals = DEFAULT_GOALS;
 
-    public SetupPanel(Consumer<GameSetup> onStart, Runnable onBack,
+    public SetupPanel(Consumer<GameSetup> onStart, Runnable onBack, Runnable onProgressChanged,
                       PlayerProfile player1, PlayerProfile player2) {
         this.onStart = onStart;
         this.onBack = onBack;
+        this.onProgressChanged = onProgressChanged == null ? () -> { } : onProgressChanged;
         this.player1 = player1;
         this.player2 = player2;
         this.characters = loadCharacters();
@@ -125,9 +127,11 @@ public final class SetupPanel extends JPanel {
         teams.add(buildPlayerSection(rightTitle, rightCards, rightDetail, UiTheme.RIGHT_COLOR, false));
 
         steps.add(buildStep("Paso 1 de 2: Configuracion del partido", buildOptions(),
-                "VOLVER", () -> onBack.run(), "SIGUIENTE", () -> stepLayout.show(steps, STEP_TEAMS)), STEP_CONFIG);
+                "VOLVER", () -> { saveProgress(); onBack.run(); },
+                "SIGUIENTE", () -> stepLayout.show(steps, STEP_TEAMS)), STEP_CONFIG);
         steps.add(buildStep("Paso 2 de 2: Seleccion de equipos", teams,
-                "ATRAS", () -> showFirstStep(), "COMENZAR", () -> startGame()), STEP_TEAMS);
+                "ATRAS", () -> { saveProgress(); showFirstStep(); },
+                "COMENZAR", () -> startGame()), STEP_TEAMS);
         add(steps, BorderLayout.CENTER);
 
         selectCard(leftCards, 0);
@@ -355,6 +359,14 @@ public final class SetupPanel extends JPanel {
      * Punto de enganche que se ejecuta tras cada mejora comprada con exito.
      */
     private void afterUpgrade() {
+        saveProgress();
+    }
+
+    /**
+     * Pide guardar el progreso de los perfiles mediante el callback recibido.
+     */
+    private void saveProgress() {
+        onProgressChanged.run();
     }
 
     /**
@@ -562,6 +574,7 @@ public final class SetupPanel extends JPanel {
                     "Configuracion no valida", JOptionPane.WARNING_MESSAGE);
             return;
         }
+        saveProgress();
         onStart.accept(new GameSetup(config, left, right, selectedResolution()));
     }
 

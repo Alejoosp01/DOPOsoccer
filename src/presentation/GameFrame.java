@@ -54,7 +54,7 @@ public final class GameFrame extends JFrame {
         cards = new JPanel(cardLayout);
 
         menuPanel = new MainMenuPanel(this::showSetup, this::openGame, this::exitGame);
-        setupPanel = new SetupPanel(this::startGame, this::showMenu, player1, player2);
+        setupPanel = new SetupPanel(this::startGame, this::showMenu, this::saveProgress, player1, player2);
         cards.add(menuPanel, "menu");
         cards.add(setupPanel, "setup");
 
