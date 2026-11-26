@@ -1,14 +1,21 @@
 package domain;
 
+import java.io.File;
+import java.io.Serializable;
+
 /**
  * Fachada del juego: es la unica clase del dominio que necesita la interfaz.
  * Crea el partido con la configuracion, los personajes y los perfiles de los
- * dos jugadores, lo avanza, lo pausa, lo termina y reparte los puntos.
+ * dos jugadores, lo avanza, lo pausa, lo termina, reparte los puntos y
+ * permite salvar y abrir el estado del partido.
  */
-public class DOPOSoccer {
+public class DOPOSoccer implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     public static final int WINNER_POINTS = 100;
     public static final int LOSER_POINTS = 25;
+    public static final String FILE_EXTENSION = ".dopo";
 
     private final MatchConfig config;
     private final Field field;
@@ -261,5 +268,40 @@ public class DOPOSoccer {
      */
     public boolean isStarted() {
         return started;
+    }
+
+    /**
+     * Devuelve el perfil de la maquina, o null si es jugador vs jugador.
+     */
+    public MachineProfile getMachineProfile() {
+        return config.getMachineProfile();
+    }
+
+    /**
+     * Salva el estado completo del partido en el archivo (marcador, tiempo,
+     * posiciones, vida, barras, auras, efectos y perfiles).
+     */
+    public void save(File file) throws DOPOSoccerException {
+        if (!started) {
+            throw new DOPOSoccerException(DOPOSoccerException.MATCH_NOT_STARTED);
+        }
+        ObjectFiles.write(file, this);
+    }
+
+    /**
+     * Abre un partido salvado. Queda pausado y sin ordenes pendientes para que
+     * los jugadores lo reanuden cuando esten listos.
+     */
+    public static DOPOSoccer open(File file) throws DOPOSoccerException {
+        Object object = ObjectFiles.read(file);
+        if (!(object instanceof DOPOSoccer)) {
+            ErrorLog.record("El archivo " + file.getName() + " no contiene una partida");
+            throw new DOPOSoccerException(DOPOSoccerException.INVALID_FILE);
+        }
+        DOPOSoccer game = (DOPOSoccer) object;
+        game.getLeftController().clearInput();
+        game.getRightController().clearInput();
+        game.pause();
+        return game;
     }
 }

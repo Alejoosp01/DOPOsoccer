@@ -6,6 +6,8 @@ package domain;
  */
 public class PushEffect extends Effect {
 
+    private static final long serialVersionUID = 1L;
+
     public static final double PUSH_SPEED = 650;
     public static final double PUSH_LIFT = 250;
 

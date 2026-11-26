@@ -6,6 +6,8 @@ package domain;
  */
 public class LightningShot extends PowerShot {
 
+    private static final long serialVersionUID = 1L;
+
     public static final double SHOT_SPEED = 950;
 
     public LightningShot() {

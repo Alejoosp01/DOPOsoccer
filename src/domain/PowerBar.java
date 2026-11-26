@@ -1,10 +1,14 @@
 package domain;
 
+import java.io.Serializable;
+
 /**
  * Barra de poder: se llena en 10 segundos. Al recibir un gol sube un cuarto.
  * Al activar el poder se vacia y en ese mismo instante empieza a recargarse.
  */
-public class PowerBar {
+public class PowerBar implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     public static final double FILL_SECONDS = 10;
     public static final double QUARTER = 0.25;

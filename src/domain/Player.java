@@ -1,5 +1,7 @@
 package domain;
 
+import java.io.Serializable;
+
 /**
  * Personaje jugando en la cancha.
  * Une el perfil del jugador (estadisticas y puntos) con el personaje elegido
@@ -7,7 +9,9 @@ package domain;
  * barra de poder y el efecto que este sufriendo.
  * El centro del jugador es (x, y) y el eje Y crece hacia abajo.
  */
-public class Player {
+public class Player implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     public static final double WIDTH = 70;
     public static final double HEIGHT = 120;
@@ -427,6 +431,13 @@ public class Player {
      */
     public boolean hasAura() {
         return auraActive;
+    }
+
+    /**
+     * Devuelve si acaba de patear (sigue corriendo la espera entre patadas).
+     */
+    public boolean isKicking() {
+        return kickCooldown > 0;
     }
 
     /**

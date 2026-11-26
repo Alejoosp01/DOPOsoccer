@@ -1,11 +1,15 @@
 package domain;
 
+import java.io.Serializable;
+
 /**
  * Rectangulo de colision de un objeto del juego.
  * (x, y) es la esquina superior izquierda y el eje Y crece hacia abajo.
  * Reemplaza a java.awt.geom.Rectangle2D para que el dominio no dependa de AWT.
  */
-public final class Hitbox {
+public final class Hitbox implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private final double x;
     private final double y;

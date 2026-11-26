@@ -1,11 +1,15 @@
 package domain;
 
+import java.io.Serializable;
+
 /**
  * Personaje seleccionable: representa a un pais y tiene un tiro de poder unico.
  * Las estadisticas NO son del personaje sino del jugador (ver Stats).
  * Se llama GameCharacter y no Character para no chocar con java.lang.Character.
  */
-public class GameCharacter {
+public class GameCharacter implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private final String name;
     private final PowerShot powerShot;

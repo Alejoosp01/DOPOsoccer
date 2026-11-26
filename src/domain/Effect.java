@@ -1,11 +1,15 @@
 package domain;
 
+import java.io.Serializable;
+
 /**
  * Efecto que sufre un jugador cuando lo golpea un tiro de poder.
  * Dura unos segundos. Cada subclase decide que le impide hacer al jugador.
  * Un jugador solo tiene un efecto a la vez: uno nuevo reemplaza al anterior.
  */
-public abstract class Effect {
+public abstract class Effect implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private final String name;
     private double timeLeft;

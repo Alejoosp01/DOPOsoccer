@@ -1,12 +1,16 @@
 package domain;
 
+import java.io.Serializable;
+
 /**
  * Tiro de poder unico de un personaje.
  * Cada subclase decide como sale el balon (launch) y que efecto le deja al
  * rival si lo golpea (createEffect). El daño se escala con el multiplicadorKick
  * de quien lo lanza: dañoPoder = dañoTiro * multiplicadorKick.
  */
-public abstract class PowerShot {
+public abstract class PowerShot implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private final String name;
     private final int damage;

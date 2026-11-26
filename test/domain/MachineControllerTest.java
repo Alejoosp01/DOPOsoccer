@@ -17,7 +17,7 @@ public class MachineControllerTest {
         left = TestData.player(true);
         right = TestData.player(false);
         match = new Match(TestData.byTime(GameMode.PVM, 1), left, right);
-        machine = new MachineController();
+        machine = new ExpertMachine();
         match.start();
     }
 
@@ -149,7 +149,19 @@ public class MachineControllerTest {
 
     @Test
     public void shouldKeepDecisionUntilReactionTimePasses() {
-        MachineController slow = new MachineController(1);
+        MachineController slow = new MachineController(0.30) {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            protected void decide(Match match, Player self, Ball ball) {
+                decideOffensive(self, ball);
+            }
+
+            @Override
+            public MachineProfile getProfile() {
+                return MachineProfile.OFFENSIVE;
+            }
+        };
         match.getBall().setPosition(700, 580);
 
         double start = left.getX();
@@ -167,16 +179,12 @@ public class MachineControllerTest {
     }
 
     @Test
-    public void shouldReactFasterWithHigherLevel() {
-        assertEquals(0.30, new MachineController(1).getReactionTime(), 0.0001);
-        assertEquals(0.10, new MachineController(5).getReactionTime(), 0.0001);
-        assertEquals(MachineController.DEFAULT_LEVEL, new MachineController().getLevel());
-    }
-
-    @Test
-    public void shouldRejectInvalidLevel() {
-        assertThrows(IllegalArgumentException.class, () -> new MachineController(0));
-        assertThrows(IllegalArgumentException.class, () -> new MachineController(6));
+    public void shouldHaveReactionTimePerProfile() {
+        assertEquals(ClumsyMachine.REACTION_TIME, new ClumsyMachine().getReactionTime(), 0.0001);
+        assertEquals(OffensiveMachine.REACTION_TIME, new OffensiveMachine().getReactionTime(), 0.0001);
+        assertEquals(DefensiveMachine.REACTION_TIME, new DefensiveMachine().getReactionTime(), 0.0001);
+        assertEquals(ExpertMachine.REACTION_TIME, new ExpertMachine().getReactionTime(), 0.0001);
+        assertTrue(new ExpertMachine().getReactionTime() < new ClumsyMachine().getReactionTime());
     }
 
     private void fillPower(Player player) {

@@ -21,9 +21,11 @@ public final class MainMenuPanel extends JPanel {
 
     private final transient Runnable onPlay;
     private final transient Runnable onExit;
+    private final transient Runnable onOpen;
 
-    public MainMenuPanel(Runnable onPlay, Runnable onExit) {
+    public MainMenuPanel(Runnable onPlay, Runnable onOpen, Runnable onExit) {
         this.onPlay = onPlay;
+        this.onOpen = onOpen;
         this.onExit = onExit;
         setLayout(new BorderLayout());
         setPreferredSize(new Dimension(1280, 720));
@@ -43,7 +45,7 @@ public final class MainMenuPanel extends JPanel {
         javax.swing.JLabel title = UiTheme.label("DOPO SOCCER", UiTheme.titleFont(), UiTheme.TEXT);
         title.setAlignmentX(CENTER_ALIGNMENT);
         javax.swing.JLabel subtitle = UiTheme.label(
-                "Futbol de cabezas - Proyecto Final DOPO 2026-2",
+                "Proyecto Final DOPO 2026-2",
                 UiTheme.subtitleFont(), UiTheme.MUTED);
         subtitle.setAlignmentX(CENTER_ALIGNMENT);
         titleBlock.add(title);
@@ -59,6 +61,12 @@ public final class MainMenuPanel extends JPanel {
         play.setMaximumSize(new Dimension(300, 54));
         play.addActionListener(event -> onPlay.run());
 
+        MenuButton open = new MenuButton("ABRIR PARTIDA", UiTheme.PANEL_LIGHT);
+        open.setForeground(UiTheme.TEXT);
+        open.setAlignmentX(CENTER_ALIGNMENT);
+        open.setMaximumSize(new Dimension(300, 54));
+        open.addActionListener(event -> onOpen.run());
+
         MenuButton how = new MenuButton("COMO JUGAR", UiTheme.PANEL_LIGHT);
         how.setForeground(UiTheme.TEXT);
         how.setAlignmentX(CENTER_ALIGNMENT);
@@ -72,6 +80,8 @@ public final class MainMenuPanel extends JPanel {
         exit.addActionListener(event -> onExit.run());
 
         buttons.add(play);
+        buttons.add(Box.createVerticalStrut(14));
+        buttons.add(open);
         buttons.add(Box.createVerticalStrut(14));
         buttons.add(how);
         buttons.add(Box.createVerticalStrut(14));
@@ -88,7 +98,7 @@ public final class MainMenuPanel extends JPanel {
         JPanel footer = new JPanel(new BorderLayout());
         footer.setOpaque(false);
         javax.swing.JLabel hint = UiTheme.label(
-                "Swing + Java2D  |  5 paises  |  PvsP, PvsM y MvsM",
+                "PvsP, PvsM y MvsM",
                 UiTheme.bodyFont(), UiTheme.MUTED);
         hint.setHorizontalAlignment(SwingConstants.CENTER);
         footer.add(hint, BorderLayout.CENTER);
@@ -109,6 +119,14 @@ public final class MainMenuPanel extends JPanel {
         super.paintComponent(graphics);
         Graphics2D g2 = (Graphics2D) graphics.create();
         UiTheme.enableAntialiasing(g2);
+        java.awt.image.BufferedImage stadium = SpriteLoader.load(SpriteLoader.STADIUM);
+        if (stadium != null) {
+            SpriteLoader.draw(g2, stadium, 0, 0, getWidth(), getHeight(), false);
+            g2.setColor(UiTheme.withAlpha(UiTheme.BG_TOP, 150));
+            g2.fillRect(0, 0, getWidth(), getHeight());
+            g2.dispose();
+            return;
+        }
         UiTheme.paintVerticalGradient(g2, getWidth(), getHeight(),
                 UiTheme.BG_TOP, UiTheme.BG_BOTTOM);
 

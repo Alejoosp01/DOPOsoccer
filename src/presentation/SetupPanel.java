@@ -19,6 +19,7 @@ import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
+import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -28,6 +29,7 @@ import domain.DOPOSoccerException;
 import domain.ErrorLog;
 import domain.GameCharacter;
 import domain.GameMode;
+import domain.MachineProfile;
 import domain.MatchConfig;
 import domain.PlayerProfile;
 import domain.StatType;
@@ -46,8 +48,8 @@ public final class SetupPanel extends JPanel {
 
     private final transient Consumer<GameSetup> onStart;
     private final transient Runnable onBack;
-    private final transient PlayerProfile player1;
-    private final transient PlayerProfile player2;
+    private transient PlayerProfile player1;
+    private transient PlayerProfile player2;
 
     private final ChoiceChip pvpOption = new ChoiceChip("Jugador vs Jugador");
     private final ChoiceChip pvmOption = new ChoiceChip("Jugador vs Maquina  (Version 2)");
@@ -69,6 +71,10 @@ public final class SetupPanel extends JPanel {
     private final transient ArrayList<GameCharacter> characters;
     private final ArrayList<CharacterCard> leftCards = new ArrayList<CharacterCard>();
     private final ArrayList<CharacterCard> rightCards = new ArrayList<CharacterCard>();
+
+    private final JComboBox<String> machineProfileBox = new JComboBox<>(
+            new String[] { MachineProfile.CLUMSY.getDisplayName(), MachineProfile.OFFENSIVE.getDisplayName(),
+                    MachineProfile.DEFENSIVE.getDisplayName(), MachineProfile.EXPERT.getDisplayName() });
 
     private int minutes = DEFAULT_MINUTES;
     private int goals = DEFAULT_GOALS;
@@ -146,7 +152,7 @@ public final class SetupPanel extends JPanel {
         modeGroup.add(pvpOption);
         modeGroup.add(pvmOption);
         pvpOption.setSelected(true);
-        pvmOption.setEnabled(false);
+        pvmOption.setEnabled(true);
 
         ButtonGroup typeGroup = new ButtonGroup();
         typeGroup.add(timeOption);
@@ -185,6 +191,10 @@ public final class SetupPanel extends JPanel {
         JPanel modeRow = row();
         modeRow.add(pvpOption);
         modeRow.add(pvmOption);
+        modeRow.add(machineProfileBox);
+        machineProfileBox.setSelectedItem(MatchConfig.DEFAULT_MACHINE.getDisplayName());
+        machineProfileBox.setVisible(pvmOption.isSelected());
+        pvmOption.addActionListener(event -> machineProfileBox.setVisible(pvmOption.isSelected()));
         JPanel typeRow = row();
         typeRow.add(timeOption);
         typeRow.add(goalsOption);
@@ -270,6 +280,15 @@ public final class SetupPanel extends JPanel {
         section.add(cardRow);
         section.add(detailRow);
         return section;
+    }
+
+    /**
+     * Cambia los perfiles que se muestran (por ejemplo despues de abrir una partida guardada).
+     */
+    public void setProfiles(PlayerProfile newPlayer1, PlayerProfile newPlayer2) {
+        player1 = newPlayer1;
+        player2 = newPlayer2;
+        refreshProfiles();
     }
 
     /**
@@ -359,11 +378,11 @@ public final class SetupPanel extends JPanel {
         if (timeOption.isSelected()) {
             ruleLabel.setText("Minutos");
             valueLabel.setText(String.valueOf(minutes));
-            ruleInfo.setText("1 a 10 minutos  |  si terminan empatados: muerte subita");
+            ruleInfo.setText("1 a 10 minutos  |  al empatar: muerte subita");
         } else {
             ruleLabel.setText("Goles para ganar");
             valueLabel.setText(String.valueOf(goals));
-            ruleInfo.setText("1 a 10 goles  |  sin limite de tiempo");
+            ruleInfo.setText("1 a 10 goles");
         }
     }
 
@@ -381,6 +400,22 @@ public final class SetupPanel extends JPanel {
     }
 
     /**
+     * Devuelve el perfil de maquina elegido en el selector (o el default si no se eligió).
+     */
+    private MachineProfile selectedMachineProfile() {
+        Object selected = machineProfileBox.getSelectedItem();
+        if (selected instanceof String) {
+            String name = (String) selected;
+            for (MachineProfile profile : MachineProfile.values()) {
+                if (profile.getDisplayName().equals(name)) {
+                    return profile;
+                }
+            }
+        }
+        return MatchConfig.DEFAULT_MACHINE;
+    }
+
+    /**
      * Crea la configuracion con lo elegido y avisa que se puede empezar.
      * Si algo no es valido muestra un mensaje claro y lo registra en el log.
      */
@@ -388,16 +423,18 @@ public final class SetupPanel extends JPanel {
         GameCharacter left = selectedCharacter(leftCards);
         GameCharacter right = selectedCharacter(rightCards);
         if (left == null || right == null) {
-            JOptionPane.showMessageDialog(this, "Elige un personaje para cada jugador.",
+            JOptionPane.showMessageDialog(this, "Elige un personaje",
                     "Falta un personaje", JOptionPane.WARNING_MESSAGE);
             return;
         }
         MatchConfig config;
         try {
+            GameMode gameMode = pvpOption.isSelected() ? GameMode.PVP : GameMode.PVM;
+            MachineProfile machine = selectedMachineProfile();
             if (timeOption.isSelected()) {
-                config = MatchConfig.byTime(GameMode.PVP, minutes);
+                config = MatchConfig.byTime(gameMode, minutes, machine);
             } else {
-                config = MatchConfig.byGoals(GameMode.PVP, goals);
+                config = MatchConfig.byGoals(gameMode, goals, machine);
             }
         } catch (DOPOSoccerException exception) {
             ErrorLog.record(exception);

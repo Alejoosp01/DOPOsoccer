@@ -6,6 +6,8 @@ package domain;
  */
 public class BlueAuraShot extends PowerShot {
 
+    private static final long serialVersionUID = 1L;
+
     public static final double SHOT_SPEED = 1100;
 
     public BlueAuraShot() {

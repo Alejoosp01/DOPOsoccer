@@ -7,6 +7,8 @@ package domain;
  */
 public class IllusionShot extends PowerShot {
 
+    private static final long serialVersionUID = 1L;
+
     public static final double SHOT_SPEED = 900;
     public static final int DECOYS = 7;
 

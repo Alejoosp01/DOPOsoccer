@@ -6,6 +6,8 @@ package domain;
  */
 public class TornadoShot extends PowerShot {
 
+    private static final long serialVersionUID = 1L;
+
     public static final double SHOT_SPEED = 850;
     public static final double BOUNCE_SPEED = 350;
 

@@ -1,11 +1,15 @@
 package domain;
 
+import java.io.Serializable;
+
 /**
  * Arco del partido.
  * El arco se representa como un rectangulo y el gol se valida cuando el balon
  * queda completamente contenido en el.
  */
-public class Goal {
+public class Goal implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private final double x;
     private final double y;

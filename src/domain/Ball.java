@@ -1,11 +1,15 @@
 package domain;
 
+import java.io.Serializable;
+
 /**
  * Balon del partido.
  * Guarda posicion y velocidad, y el tiro de poder que lleva (si lo lleva).
  * La gravedad y los rebotes se calculan en update(dt, field).
  */
-public class Ball {
+public class Ball implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     public static final double RESTITUTION = 0.75;
     public static final double GROUND_FRICTION = 0.98;

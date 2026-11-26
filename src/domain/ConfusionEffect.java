@@ -7,6 +7,8 @@ package domain;
  */
 public class ConfusionEffect extends Effect {
 
+    private static final long serialVersionUID = 1L;
+
     public ConfusionEffect(double duration) {
         super("Confusion", duration);
     }

@@ -1,11 +1,15 @@
 package domain;
 
+import java.io.Serializable;
+
 /**
  * Estadisticas de un jugador: speed, kick, jump y survival, de 1 a 10.
  * Aplican a todos los personajes del jugador. Cada punto por encima de 1
  * suma un 10 % sobre el valor base de la estadistica.
  */
-public class Stats {
+public class Stats implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     public static final int MIN = 1;
     public static final int MAX = 10;

@@ -1,10 +1,14 @@
 package domain;
 
+import java.io.Serializable;
+
 /**
  * Une un partido con los controladores de cada lado.
  * El runner actualiza primero las decisiones y despues la fisica del partido.
  */
-public class MatchRunner {
+public class MatchRunner implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private final Match match;
     private final PlayerController leftController;
@@ -35,7 +39,8 @@ public class MatchRunner {
             case PVP:
                 return new MatchRunner(match, new HumanController(), new HumanController());
             default:
-                return new MatchRunner(match, new HumanController(), new MachineController());
+                return new MatchRunner(match, new HumanController(),
+                        match.getConfig().getMachineProfile().createController());
         }
     }
 

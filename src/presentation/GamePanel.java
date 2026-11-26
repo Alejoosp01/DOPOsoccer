@@ -23,6 +23,8 @@ import java.awt.geom.Path2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.geom.RoundRectangle2D;
+import java.awt.image.BufferedImage;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Random;
@@ -30,9 +32,12 @@ import java.util.Set;
 
 import javax.swing.AbstractAction;
 import javax.swing.JComponent;
+import javax.swing.JFileChooser;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.KeyStroke;
 import javax.swing.Timer;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 import domain.Ball;
 import domain.BlueAuraShot;
@@ -44,10 +49,13 @@ import domain.GameMode;
 import domain.Goal;
 import domain.Hitbox;
 import domain.HumanController;
+import domain.IllusionShot;
 import domain.LightningShot;
 import domain.Match;
 import domain.MatchState;
 import domain.DOPOSoccer;
+import domain.DOPOSoccerException;
+import domain.ErrorLog;
 import domain.Player;
 import domain.PlayerController;
 import domain.PowerShot;
@@ -72,6 +80,10 @@ public final class GamePanel extends JPanel implements ActionListener {
     private static final int TIMER_DELAY = 16;
     private static final int STANDS_BOTTOM = 290;
     private static final int BOARDS_HEIGHT = 28;
+    /** El arco de imagen se dibuja un poco mas ancho que la zona de gol para que no se vea aplastado. */
+    private static final double GOAL_IMAGE_STRETCH = 1.4;
+    /** Cuadros por segundo de la animacion del balon con tiro de poder. */
+    private static final double SHOT_FPS = 12;
     private static final int VIEW_WIDTH = 1280;
     private static final int VIEW_HEIGHT = 720;
 
@@ -82,6 +94,8 @@ public final class GamePanel extends JPanel implements ActionListener {
     private final ArrayList<CrowdDot> crowd = new ArrayList<CrowdDot>();
     private final transient Set<Integer> leftKeys = new HashSet<Integer>();
     private final transient Set<Integer> rightKeys = new HashSet<Integer>();
+    private final transient PlayerAnimation leftAnimation = new PlayerAnimation(Side.LEFT);
+    private final transient PlayerAnimation rightAnimation = new PlayerAnimation(Side.RIGHT);
 
     private long lastNanos;
     private double accumulator;
@@ -110,7 +124,9 @@ public final class GamePanel extends JPanel implements ActionListener {
         setBackground(UiTheme.BG_TOP);
         setFocusable(true);
 
-        session.start();
+        if (!session.isStarted()) {
+            session.start();
+        }
         Match match = session.getMatch();
         lastState = match.getState();
         lastLeftGoals = match.getScore().getLeftGoals();
@@ -172,6 +188,7 @@ public final class GamePanel extends JPanel implements ActionListener {
         bindPress(KeyEvent.VK_P, "pauseKey", this::togglePause);
         bindPress(KeyEvent.VK_M, "menu", this::goToMenu);
         bindPress(KeyEvent.VK_T, "endMatch", this::endMatch);
+        bindPress(KeyEvent.VK_G, "saveGame", this::saveGame);
         bindPress(KeyEvent.VK_R, "rematch", this::rematch);
         bindPress(KeyEvent.VK_ENTER, "rematchEnter", this::rematch);
     }
@@ -245,6 +262,46 @@ public final class GamePanel extends JPanel implements ActionListener {
     }
 
     /**
+     * Pausa el partido y lo salva en el archivo .dopo que elija el usuario.
+     */
+    private void saveGame() {
+        if (session.isFinished()) {
+            JOptionPane.showMessageDialog(this, "El partido ya termino; no hay nada que guardar.",
+                    "Guardar partida", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        if (!session.isPaused()) {
+            session.pause();
+        }
+        accumulator = 0;
+        clearInput();
+        repaint();
+        JFileChooser chooser = new JFileChooser(new File("."));
+        chooser.setDialogTitle("Guardar partida");
+        chooser.setFileFilter(new FileNameExtensionFilter("Partidas DOPOSoccer (*.dopo)", "dopo"));
+        chooser.setSelectedFile(new File("partida" + DOPOSoccer.FILE_EXTENSION));
+        if (chooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+            File file = chooser.getSelectedFile();
+            if (!file.getName().toLowerCase().endsWith(DOPOSoccer.FILE_EXTENSION)) {
+                file = new File(file.getParentFile(), file.getName() + DOPOSoccer.FILE_EXTENSION);
+            }
+            try {
+                session.save(file);
+                JOptionPane.showMessageDialog(this, "Partida guardada en:\n" + file.getAbsolutePath(),
+                        "Guardar partida", JOptionPane.INFORMATION_MESSAGE);
+            } catch (DOPOSoccerException exception) {
+                ErrorLog.record(exception);
+                JOptionPane.showMessageDialog(this, exception.getMessage() + "\n" + file.getAbsolutePath(),
+                        "No se pudo guardar", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+        clearInput();
+        lastNanos = System.nanoTime();
+        requestFocusInWindow();
+        repaint();
+    }
+
+    /**
      * Vuelve al menu principal.
      */
     private void goToMenu() {
@@ -278,6 +335,13 @@ public final class GamePanel extends JPanel implements ActionListener {
         clearInput();
         requestFocusInWindow();
         repaint();
+    }
+
+    /**
+     * Devuelve la partida que se esta jugando en este panel.
+     */
+    public DOPOSoccer getSession() {
+        return session;
     }
 
     private void rematch() {
@@ -392,6 +456,10 @@ public final class GamePanel extends JPanel implements ActionListener {
         }
         double frameSeconds = elapsed / 1_000_000_000.0;
         animationTime += frameSeconds;
+        if (!session.isPaused()) {
+            leftAnimation.update(session.getMatch(), frameSeconds);
+            rightAnimation.update(session.getMatch(), frameSeconds);
+        }
 
         if (session.isPaused() || session.isFinished()) {
             accumulator = 0;
@@ -450,15 +518,26 @@ public final class GamePanel extends JPanel implements ActionListener {
         Graphics2D g2 = (Graphics2D) graphics.create();
         UiTheme.enableAntialiasing(g2);
         g2.scale(resolution.getScale(), resolution.getScale());
-        drawBackground(g2);
+        BufferedImage fieldImage = SpriteLoader.load(SpriteLoader.BACKGROUND);
+        if (fieldImage != null) {
+            SpriteLoader.draw(g2, fieldImage, 0, 0, VIEW_WIDTH, VIEW_HEIGHT, false);
+        } else {
+            drawBackground(g2);
+        }
 
         Match match = session.getMatch();
         if (match != null) {
             Field field = match.getField();
-            drawArena(g2, field);
+            if (fieldImage != null) {
+                drawHudBand(g2, field);
+            } else {
+                drawArena(g2, field);
+            }
             drawGoal(g2, field.getLeftGoal(), true);
             drawGoal(g2, field.getRightGoal(), false);
-            drawMarkings(g2, field);
+            if (fieldImage == null) {
+                drawMarkings(g2, field);
+            }
             drawPlayer(g2, match.getLeftPlayer(), match.getBall(), true);
             drawPlayer(g2, match.getRightPlayer(), match.getBall(), false);
             drawBall(g2, match.getBall());
@@ -572,7 +651,27 @@ public final class GamePanel extends JPanel implements ActionListener {
                 (int) field.getRightGoalLineX(), ground);
     }
 
+    /**
+     * Oscurece la franja bajo el piso para que el HUD se lea sobre la imagen de la cancha.
+     */
+    private void drawHudBand(Graphics2D g2, Field field) {
+        int ground = (int) field.getGroundY();
+        g2.setPaint(new GradientPaint(0, ground, UiTheme.withAlpha(UiTheme.BG_TOP, 150),
+                0, VIEW_HEIGHT, UiTheme.withAlpha(UiTheme.BG_TOP, 235)));
+        g2.fillRect(0, ground, VIEW_WIDTH, VIEW_HEIGHT - ground);
+    }
+
     private void drawGoal(Graphics2D g2, Goal goal, boolean left) {
+        BufferedImage goalImage = SpriteLoader.load(SpriteLoader.GOAL);
+        if (goalImage != null) {
+            double width = goal.getWidth() * GOAL_IMAGE_STRETCH;
+            double x = goal.getX();
+            if (left) {
+                x = goal.getRight() - width;
+            }
+            SpriteLoader.draw(g2, goalImage, x, goal.getY(), width, goal.getHeight(), left);
+            return;
+        }
         int x = (int) goal.getX();
         int y = (int) goal.getY();
         int width = (int) goal.getWidth();
@@ -621,6 +720,14 @@ public final class GamePanel extends JPanel implements ActionListener {
         g2.setColor(new Color(0, 0, 0, 80));
         g2.fillOval((int) (cx - bounds.width * 0.62), (int) (ground - 10),
                 (int) (bounds.width * 1.24), 16);
+
+        PlayerAnimation animation = left ? leftAnimation : rightAnimation;
+        BufferedImage frame = animation.currentFrame(player);
+        if (SpriteLoader.drawCharacter(g2, frame, box.getX(), box.getY(),
+                box.getWidth(), box.getHeight(), animation.isFlipped())) {
+            drawPlayerEffects(g2, player, bounds, cx, bounds.y);
+            return;
+        }
 
         double bodyWidth = bounds.width * 0.58;
         double bodyTop = bounds.y + bounds.width * 0.72;
@@ -677,18 +784,26 @@ public final class GamePanel extends JPanel implements ActionListener {
         g2.draw(new Arc2D.Double(cx - headRadius * 0.26, headCenterY + headRadius * 0.28,
                 headRadius * 0.52, headRadius * 0.3, 200, 140, Arc2D.OPEN));
 
+        drawPlayerEffects(g2, player, bounds, cx, headCenterY - headRadius);
+    }
+
+    /**
+     * Dibuja encima del jugador el efecto que sufre (chispas, empuje, estrellas o confusion) y el aturdimiento.
+     */
+    private void drawPlayerEffects(Graphics2D g2, Player player, Rectangle2D.Double bounds,
+                                   double cx, double topY) {
         Effect effect = player.getEffect();
         if (effect instanceof ElectrocutedEffect) {
             drawElectrocuted(g2, bounds);
         } else if (effect instanceof PushEffect) {
             drawPushed(g2, bounds, player.getVelocityX());
         } else if (effect instanceof UnconsciousEffect) {
-            drawStunStars(g2, cx, headCenterY - headRadius - 12);
+            drawStunStars(g2, cx, topY - 12);
         } else if (effect instanceof ConfusionEffect) {
-            drawConfused(g2, cx, headCenterY - headRadius - 16);
+            drawConfused(g2, cx, topY - 16);
         }
         if (player.isStunned()) {
-            drawStunStars(g2, cx, headCenterY - headRadius - 12);
+            drawStunStars(g2, cx, topY - 12);
         }
     }
 
@@ -798,6 +913,10 @@ public final class GamePanel extends JPanel implements ActionListener {
         g2.fillOval((int) (ball.getX() - ball.getRadius() * 1.1), (int) (ground - 7),
                 (int) (ball.getRadius() * 2.2), 11);
 
+        if (drawBallSprite(g2, ball)) {
+            return;
+        }
+
         if (ball.hasActiveShot() && ball.getDecoyCount() == 0) {
             float pulse = (float) (0.5 + 0.5 * Math.sin(animationTime * 9));
             Color glowColor = shotColor(ball.getActiveShot());
@@ -824,6 +943,49 @@ public final class GamePanel extends JPanel implements ActionListener {
         }
 
         drawBallShape(g2, ball.getX(), ball.getY(), ball.getRadius(), 255);
+    }
+
+    /**
+     * Dibuja el balon (y los balones falsos de la Ilusion) con sus imagenes. Con tiro de poder usa la animacion
+     * de ese tiro; si no, el balon normal girando segun cuanto ha rodado. Devuelve false si no hay imagenes.
+     */
+    private boolean drawBallSprite(Graphics2D g2, Ball ball) {
+        BufferedImage frame;
+        boolean flipped = ball.getVelocityX() < 0;
+        double angle = 0;
+        if (ball.hasActiveShot() || ball.getDecoyCount() > 0) {
+            PowerShot shot = ball.getActiveShot();
+            if (shot == null) {
+                shot = new IllusionShot();
+            }
+            frame = SpriteLoader.frameAt(SpriteLoader.shotFrames(shot, SpriteLoader.FLY),
+                    animationTime, SHOT_FPS);
+        } else {
+            BufferedImage[] roll = SpriteLoader.ballFrames(SpriteLoader.ROLL);
+            frame = roll.length == 0 ? null : roll[0];
+            angle = ball.getX() / ball.getRadius();
+            flipped = false;
+        }
+        if (frame == null) {
+            return false;
+        }
+        int decoys = ball.getDecoyCount();
+        double spacing = ball.getRadius() * 2.8;
+        for (int i = 0; i < decoys; i++) {
+            double offsetX;
+            double offsetY = 0;
+            if (i < 3) {
+                offsetX = -(i + 1) * spacing;
+            } else if (i < 6) {
+                offsetX = (i - 2) * spacing;
+            } else {
+                offsetX = 0;
+                offsetY = -spacing;
+            }
+            SpriteLoader.drawBall(g2, frame, ball.getX() + offsetX, ball.getY() + offsetY,
+                    ball.getRadius(), flipped, angle);
+        }
+        return SpriteLoader.drawBall(g2, frame, ball.getX(), ball.getY(), ball.getRadius(), flipped, angle);
     }
 
     /**
@@ -1122,6 +1284,22 @@ public final class GamePanel extends JPanel implements ActionListener {
         }
         Composite old = g2.getComposite();
         g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
+        BufferedImage bannerImage = SpriteLoader.load(SpriteLoader.GOAL_BANNER);
+        if (bannerImage != null) {
+            double width = 460;
+            double height = width * bannerImage.getHeight() / bannerImage.getWidth();
+            SpriteLoader.draw(g2, bannerImage, (VIEW_WIDTH - width) / 2, 130, width, height, false);
+            g2.setFont(UiTheme.font(Font.BOLD, 30));
+            String name = banner.startsWith("GOL DE ") ? banner.substring(7) : "";
+            int nameX = (VIEW_WIDTH - g2.getFontMetrics().stringWidth(name)) / 2;
+            int nameY = (int) (130 + height + 28);
+            g2.setColor(UiTheme.withAlpha(Color.BLACK, 160));
+            g2.drawString(name, nameX + 2, nameY + 2);
+            g2.setColor(Color.WHITE);
+            g2.drawString(name, nameX, nameY);
+            g2.setComposite(old);
+            return;
+        }
         g2.setFont(UiTheme.font(Font.BOLD, 62));
         FontMetrics metrics = g2.getFontMetrics();
         int x = (VIEW_WIDTH - metrics.stringWidth(banner)) / 2;
@@ -1153,7 +1331,7 @@ public final class GamePanel extends JPanel implements ActionListener {
         g2.setFont(UiTheme.font(Font.BOLD, 17));
         g2.setColor(UiTheme.MUTED);
         drawCentered(g2, "ESC / P  continuar", VIEW_WIDTH / 2, y + 118);
-        drawCentered(g2, "T  terminar el partido      M  volver al menu", VIEW_WIDTH / 2, y + 150);
+        drawCentered(g2, "T  terminar     G  guardar partida     M  menu", VIEW_WIDTH / 2, y + 150);
         g2.setFont(UiTheme.font(Font.PLAIN, 13));
         g2.setColor(UiTheme.withAlpha(UiTheme.MUTED, 190));
         drawCentered(g2, "La partida queda exactamente donde la dejaste",
@@ -1163,6 +1341,11 @@ public final class GamePanel extends JPanel implements ActionListener {
     private void drawResultOverlay(Graphics2D g2, Match match) {
         g2.setColor(new Color(2, 6, 12, 195));
         g2.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT);
+        BufferedImage confetti = SpriteLoader.load(SpriteLoader.CONFETTI);
+        if (confetti != null && match != null && match.getWinner() != Winner.NONE) {
+            SpriteLoader.draw(g2, confetti, 120, 60, 420, 400, false);
+            SpriteLoader.draw(g2, confetti, VIEW_WIDTH - 540, 60, 420, 400, true);
+        }
 
         int width = 660;
         int height = 380;
@@ -1242,6 +1425,9 @@ public final class GamePanel extends JPanel implements ActionListener {
             human = rightHuman();
         }
         if (human == null) {
+            if (session.getMachineProfile() != null) {
+                return "MAQUINA " + session.getMachineProfile().getDisplayName().toUpperCase();
+            }
             return "MAQUINA";
         }
         if (left) {

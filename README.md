@@ -14,14 +14,20 @@ Estado: **Version uno** (Presentacion + Dominio, nivel basico Jugador vs Jugador
 
 ## Como ejecutar
 
-Desde la raiz del repositorio:
+El proyecto se trabaja en **VS Code** con el *Extension Pack for Java*
+(VS Code lo recomienda al abrir la carpeta). La configuracion compartida esta
+en `.vscode/`: carpetas `src`, `test` y `resources`, JUnit en `lib/` y la
+configuracion de ejecucion **DOPOSoccer** (Run and Debug, F5).
+
+Desde la terminal (PowerShell), en la raiz del repositorio:
 
 ```powershell
 javac -encoding UTF-8 -d out (Get-ChildItem src -Recurse -Filter *.java | ForEach-Object { $_.FullName })
-java -cp out presentation.DOPOSoccerApp
+java -cp "out;resources" presentation.DOPOSoccerApp
 ```
 
-En VS Code o Eclipse se ejecuta la clase `presentation.DOPOSoccerApp`.
+`resources` va en el classpath porque ahi estan las imagenes del juego
+(ver `resources/ASSETS.md`).
 
 ## Como jugar
 
@@ -65,10 +71,10 @@ En VS Code o Eclipse se ejecuta la clase `presentation.DOPOSoccerApp`.
 
 ```powershell
 javac -encoding UTF-8 -cp lib/junit-platform-console-standalone-1.14.4.jar -d out (Get-ChildItem src, test -Recurse -Filter *.java | ForEach-Object { $_.FullName })
-java -jar lib/junit-platform-console-standalone-1.14.4.jar execute --class-path out --scan-class-path --details=summary
+java -jar lib/junit-platform-console-standalone-1.14.4.jar execute --class-path "out;resources" --scan-class-path --details=summary
 ```
 
-Resultado actual: **148 pruebas, 148 exitosas**.
+Resultado actual: **210 pruebas, 210 exitosas** (las de sprites necesitan `resources` en el classpath).
 
 ## Estructura
 

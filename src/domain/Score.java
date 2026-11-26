@@ -1,9 +1,13 @@
 package domain;
 
+import java.io.Serializable;
+
 /**
  * Marcador de un partido: goles del lado izquierdo y del derecho.
  */
-public final class Score {
+public final class Score implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private int leftGoals;
     private int rightGoals;

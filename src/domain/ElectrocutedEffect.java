@@ -6,6 +6,8 @@ package domain;
  */
 public class ElectrocutedEffect extends Effect {
 
+    private static final long serialVersionUID = 1L;
+
     public static final double SPEED_FACTOR = 0.5;
 
     public ElectrocutedEffect(double duration) {
