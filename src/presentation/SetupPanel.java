@@ -341,11 +341,7 @@ public final class SetupPanel extends JPanel {
         private static final int BOARD_MAX_WIDTH = 1076;
         /** Alto maximo del tablero en pixeles. */
         private static final int BOARD_MAX_HEIGHT = 150;
-        /** Insets de origen (px de la imagen 918x664) y factor uniforme del 9-slice. */
-        private static final int SRC_LEFT = 300;
-        private static final int SRC_TOP = 150;
-        private static final int SRC_RIGHT = 300;
-        private static final int SRC_BOTTOM = 144;
+        /** Factor uniforme del 9-slice (los bordes de origen estan en SpriteLoader.STATS_BOARD_INSETS). */
         private static final double SLICE_FACTOR = 0.25;
 
         /**
@@ -367,7 +363,7 @@ public final class SetupPanel extends JPanel {
             Graphics2D g2 = (Graphics2D) graphics.create();
             BufferedImage board =
                     SpriteLoader.nineSlice(SpriteLoader.STATS_BOARD, getWidth(), getHeight(),
-                            SRC_LEFT, SRC_TOP, SRC_RIGHT, SRC_BOTTOM, SLICE_FACTOR);
+                            SpriteLoader.STATS_BOARD_INSETS, SLICE_FACTOR);
             if (board != null) {
                 g2.drawImage(board, 0, 0, null);
             } else {

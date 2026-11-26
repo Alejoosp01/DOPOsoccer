@@ -3,6 +3,7 @@ package presentation;
 import java.awt.Font;
 import java.awt.FontFormatException;
 import java.awt.Graphics2D;
+import java.awt.Insets;
 import java.awt.RenderingHints;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
@@ -57,6 +58,13 @@ public final class SpriteLoader {
     public static final String BADGE_BOLT = HUD + "badge_bolt" + EXTENSION;
     public static final String BADGE_SHIELD = HUD + "badge_shield" + EXTENSION;
     public static final String STATS_BOARD = HUD + "stats_board" + EXTENSION;
+
+    /** Bordes decorados (en pixeles del recurso original) para escalar en 9 partes: stats_board 918x664. */
+    public static final Insets STATS_BOARD_INSETS = new Insets(150, 300, 144, 300);
+    /** Cintas ribbon_blue 740x273 y ribbon_red 701x260: colas laterales y sombra inferior. */
+    public static final Insets RIBBON_INSETS = new Insets(40, 100, 60, 100);
+    /** scoreboard_panel 902x418: esquinas y base; la joroba superior se deforma, mejor usar scaledToFit. */
+    public static final Insets SCOREBOARD_INSETS = new Insets(70, 120, 60, 120);
 
     /** Nombres de los botones con imagen (archivos {@code nombre_normal.png} y {@code nombre_pressed.png}). */
     public static final String BUTTON_BACK = "back";
@@ -174,23 +182,49 @@ public final class SpriteLoader {
         if (result != null) {
             return result;
         }
-        int dl = (int) Math.round(left * factor);
-        int dt = (int) Math.round(top * factor);
-        int dr = (int) Math.round(right * factor);
-        int db = (int) Math.round(bottom * factor);
-        if (dl + dr >= width || dt + db >= height) {
-            return scaled(path, width, height);
-        }
+        result = nineSlice(source, width, height, left, top, right, bottom, factor);
+        SCALED.put(key, result);
+        return result;
+    }
+
+    /**
+     * Devuelve la imagen escalada en 9 partes usando los bordes indicados, en cache.
+     */
+    public static BufferedImage nineSlice(String path, int width, int height, Insets insets, double factor) {
+        return nineSlice(path, width, height, insets.left, insets.top, insets.right, insets.bottom, factor);
+    }
+
+    /**
+     * Devuelve la imagen escalada en 9 partes (sin cache); si los bordes no caben reduce el factor y, si aun asi no caben, estira todo.
+     */
+    static BufferedImage nineSlice(BufferedImage source, int width, int height,
+                                   int left, int top, int right, int bottom, double factor) {
         int sw = source.getWidth();
         int sh = source.getHeight();
+        BufferedImage result = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = result.createGraphics();
+        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+        g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+        double fit = factor;
+        if (left + right > 0) {
+            fit = Math.min(fit, (width - 1.0) / (left + right));
+        }
+        if (top + bottom > 0) {
+            fit = Math.min(fit, (height - 1.0) / (top + bottom));
+        }
+        int dl = (int) Math.round(left * fit);
+        int dt = (int) Math.round(top * fit);
+        int dr = (int) Math.round(right * fit);
+        int db = (int) Math.round(bottom * fit);
+        if (fit <= 0 || left + right >= sw || top + bottom >= sh || dl + dr >= width || dt + db >= height) {
+            g2.drawImage(source, 0, 0, width, height, null);
+            g2.dispose();
+            return result;
+        }
         int[] sx = {0, left, sw - right, sw};
         int[] sy = {0, top, sh - bottom, sh};
         int[] dx = {0, dl, width - dr, width};
         int[] dy = {0, dt, height - db, height};
-        result = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g2 = result.createGraphics();
-        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
-        g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 3; col++) {
                 g2.drawImage(source, dx[col], dy[row], dx[col + 1], dy[row + 1],
@@ -198,7 +232,42 @@ public final class SpriteLoader {
             }
         }
         g2.dispose();
-        SCALED.put(key, result);
+        return result;
+    }
+
+    /**
+     * Devuelve la imagen escalada para caber en la caja manteniendo su proporcion, en cache.
+     */
+    public static BufferedImage scaledToFit(String path, int maxWidth, int maxHeight) {
+        if (maxWidth <= 0 || maxHeight <= 0) {
+            return null;
+        }
+        BufferedImage source = load(path);
+        if (source == null) {
+            return null;
+        }
+        String key = path + "@fit" + maxWidth + "x" + maxHeight;
+        BufferedImage result = SCALED.get(key);
+        if (result == null) {
+            result = fit(source, maxWidth, maxHeight);
+            SCALED.put(key, result);
+        }
+        return result;
+    }
+
+    /**
+     * Devuelve la imagen escalada para caber en la caja manteniendo su proporcion (sin cache).
+     */
+    static BufferedImage fit(BufferedImage source, int maxWidth, int maxHeight) {
+        double ratio = Math.min((double) maxWidth / source.getWidth(), (double) maxHeight / source.getHeight());
+        int w = Math.max(1, Math.min(maxWidth, (int) Math.round(source.getWidth() * ratio)));
+        int h = Math.max(1, Math.min(maxHeight, (int) Math.round(source.getHeight() * ratio)));
+        BufferedImage result = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = result.createGraphics();
+        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+        g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+        g2.drawImage(source, 0, 0, w, h, null);
+        g2.dispose();
         return result;
     }
 
