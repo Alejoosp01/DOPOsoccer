@@ -1,6 +1,7 @@
 package presentation;
 
 import java.awt.BorderLayout;
+import java.awt.CardLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
@@ -76,6 +77,11 @@ public final class SetupPanel extends JPanel {
             new String[] { MachineProfile.CLUMSY.getDisplayName(), MachineProfile.OFFENSIVE.getDisplayName(),
                     MachineProfile.DEFENSIVE.getDisplayName(), MachineProfile.EXPERT.getDisplayName() });
 
+    private static final String STEP_CONFIG = "config";
+    private static final String STEP_TEAMS = "teams";
+    private final CardLayout stepLayout = new CardLayout();
+    private final JPanel steps = new JPanel(stepLayout);
+
     private int minutes = DEFAULT_MINUTES;
     private int goals = DEFAULT_GOALS;
 
@@ -105,43 +111,64 @@ public final class SetupPanel extends JPanel {
     }
 
     /**
-     * Arma la pantalla: encabezado, opciones del partido, tarjetas y botones.
+     * Arma la pantalla en dos pasos: configuracion del partido y seleccion de equipos.
      */
     private void buildInterface() {
-        JPanel header = new JPanel();
-        header.setOpaque(false);
-        header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
-        JLabel title = UiTheme.label("CONFIGURAR PARTIDA", UiTheme.headingFont(), UiTheme.TEXT);
-        title.setAlignmentX(CENTER_ALIGNMENT);
-        header.add(title);
-        header.setBorder(BorderFactory.createEmptyBorder(14, 0, 4, 0));
-        add(header, BorderLayout.NORTH);
+        steps.setOpaque(false);
+        JPanel teams = new JPanel();
+        teams.setOpaque(false);
+        teams.setLayout(new BoxLayout(teams, BoxLayout.Y_AXIS));
+        teams.add(buildPlayerSection(leftTitle, leftCards, leftDetail, UiTheme.LEFT_COLOR));
+        teams.add(Box.createVerticalStrut(8));
+        teams.add(buildPlayerSection(rightTitle, rightCards, rightDetail, UiTheme.RIGHT_COLOR));
 
-        JPanel content = new JPanel();
-        content.setOpaque(false);
-        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
-        content.add(buildOptions());
-        content.add(Box.createVerticalStrut(2));
-        content.add(buildPlayerSection(leftTitle, leftCards, leftDetail, UiTheme.LEFT_COLOR));
-        content.add(Box.createVerticalStrut(8));
-        content.add(buildPlayerSection(rightTitle, rightCards, rightDetail, UiTheme.RIGHT_COLOR));
-        add(content, BorderLayout.CENTER);
-
-        JPanel footer = new JPanel(new FlowLayout(FlowLayout.CENTER, 18, 10));
-        footer.setOpaque(false);
-        MenuButton back = new MenuButton("VOLVER", UiTheme.PANEL_LIGHT);
-        back.setForeground(UiTheme.TEXT);
-        back.addActionListener(event -> onBack.run());
-        MenuButton start = new MenuButton("COMENZAR", UiTheme.ACCENT);
-        start.addActionListener(event -> startGame());
-        footer.add(back);
-        footer.add(start);
-        add(footer, BorderLayout.SOUTH);
+        steps.add(buildStep("Paso 1 de 2: Configuracion del partido", buildOptions(),
+                "VOLVER", () -> onBack.run(), "SIGUIENTE", () -> stepLayout.show(steps, STEP_TEAMS)), STEP_CONFIG);
+        steps.add(buildStep("Paso 2 de 2: Seleccion de equipos", teams,
+                "ATRAS", () -> showFirstStep(), "COMENZAR", () -> startGame()), STEP_TEAMS);
+        add(steps, BorderLayout.CENTER);
 
         selectCard(leftCards, 0);
         selectCard(rightCards, 1);
         refreshProfiles();
         applyTypeChange();
+    }
+
+    /**
+     * Muestra el primer paso (configuracion del partido).
+     */
+    public void showFirstStep() {
+        stepLayout.show(steps, STEP_CONFIG);
+    }
+
+    /**
+     * Crea un paso con titulo, contenido central y dos botones inferiores.
+     */
+    private JPanel buildStep(String titleText, JPanel body, String leftText, Runnable leftAction,
+                             String rightText, Runnable rightAction) {
+        JPanel step = new JPanel(new BorderLayout());
+        step.setOpaque(false);
+        JPanel header = new JPanel();
+        header.setOpaque(false);
+        header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
+        JLabel title = UiTheme.label(titleText, UiTheme.headingFont(), UiTheme.TEXT);
+        title.setAlignmentX(CENTER_ALIGNMENT);
+        header.add(title);
+        header.setBorder(BorderFactory.createEmptyBorder(14, 0, 4, 0));
+        step.add(header, BorderLayout.NORTH);
+        step.add(body, BorderLayout.CENTER);
+
+        JPanel footer = new JPanel(new FlowLayout(FlowLayout.CENTER, 18, 10));
+        footer.setOpaque(false);
+        MenuButton left = new MenuButton(leftText, UiTheme.PANEL_LIGHT);
+        left.setForeground(UiTheme.TEXT);
+        left.addActionListener(event -> leftAction.run());
+        MenuButton right = new MenuButton(rightText, UiTheme.ACCENT);
+        right.addActionListener(event -> rightAction.run());
+        footer.add(left);
+        footer.add(right);
+        step.add(footer, BorderLayout.SOUTH);
+        return step;
     }
 
     /**

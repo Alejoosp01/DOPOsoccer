@@ -151,6 +151,7 @@ public final class GameFrame extends JFrame {
      */
     private void showSetup() {
         setupPanel.refreshProfiles();
+        setupPanel.showFirstStep();
         cardLayout.show(cards, "setup");
     }
 
