@@ -174,6 +174,19 @@ public class MatchTest {
     }
 
     @Test
+    public void shouldStartKickCooldownWhenKickingTheAir() {
+        match.start();
+        left.setPosition(320, groundCenter);
+        right.setPosition(900, groundCenter);
+        match.getBall().setPosition(700, groundCenter);
+
+        assertFalse(match.kick(Side.LEFT));
+
+        assertTrue(left.isKicking());
+        assertFalse(left.canKick());
+    }
+
+    @Test
     public void shouldNotDamageRivalJumpingOverTheFoot() {
         match.start();
         left.setPosition(320, groundCenter);

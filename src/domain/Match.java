@@ -187,6 +187,7 @@ public class Match implements Serializable {
      * Patea con el jugador del lado indicado.
      * Si el pie toca el balon, lo impulsa (o lanza el tiro de poder si tiene aura).
      * Si el pie alcanza al rival, le hace 10 x multiplicadorKick de daño.
+     * La patada siempre inicia la espera (y la animacion), aunque no toque nada.
      * Devuelve true si la patada toco el balon o al rival.
      */
     public boolean kick(Side side) {
@@ -202,17 +203,15 @@ public class Match implements Serializable {
         boolean touchedBall;
         if (player.hasAura() && player.touchesBall(ball)) {
             firePowerShot(player);
-            player.startKickCooldown();
             touchedBall = true;
         } else {
             touchedBall = player.kick(ball);
         }
         if (hitsRival) {
-            if (!touchedBall) {
-                player.startKickCooldown();
-            }
             opponent.receiveDamage(KICK_DAMAGE * player.getKickMultiplier());
         }
+        // La patada se anima aunque sea al aire.
+        player.startKickCooldown();
         return touchedBall || hitsRival;
     }
 

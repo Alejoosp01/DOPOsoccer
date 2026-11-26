@@ -69,3 +69,8 @@ dopo_progress.dat
 
 # Comprimidos y copias (no se suben: duplican lo que ya esta en el repo)
 *.zip
+
+# ---------- Claude Code (configuracion local de agentes, NUNCA se sube) ----------
+.claude/
+CLAUDE.md
+CLAUDE.local.md
