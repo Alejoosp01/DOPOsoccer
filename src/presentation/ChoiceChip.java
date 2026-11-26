@@ -31,7 +31,7 @@ public final class ChoiceChip extends JToggleButton {
     }
 
     /**
-     * Dibuja la pastilla: verde si esta elegida, gris si no, apagada si esta deshabilitada.
+     * Dibuja la pastilla: naranja si esta elegida, gris si no, apagada si esta deshabilitada.
      */
     @Override
     protected void paintComponent(Graphics graphics) {
@@ -48,9 +48,9 @@ public final class ChoiceChip extends JToggleButton {
             border = UiTheme.withAlpha(UiTheme.BORDER, 90);
             text = UiTheme.withAlpha(UiTheme.MUTED, 110);
         } else if (isSelected()) {
-            fill = UiTheme.ACCENT;
-            border = UiTheme.lighten(UiTheme.ACCENT, 0.3f);
-            text = UiTheme.BG_TOP;
+            fill = UiTheme.ORANGE;
+            border = UiTheme.GOLD_LIGHT;
+            text = UiTheme.TEXT_LIGHT;
         } else if (getModel().isRollover()) {
             fill = UiTheme.lighten(UiTheme.PANEL_LIGHT, 0.12f);
         }

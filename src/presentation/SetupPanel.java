@@ -391,6 +391,13 @@ public final class SetupPanel extends JPanel {
         }
 
         /**
+         * Asocia el area de detalle: si esta queda sin espacio, la cabecera muestra el resumen del personaje.
+         */
+        void setDetail(DetailArea detail) {
+            this.detail = detail;
+        }
+
+        /**
          * Cambia el texto de puntos que se muestra a la derecha.
          */
         void setPoints(String points) {
@@ -786,7 +793,7 @@ public final class SetupPanel extends JPanel {
                         UiTheme.withAlpha(UiTheme.RIGHT_COLOR, 0)}));
         g2.fillRect(0, 0, getWidth(), getHeight());
 
-        g2.setColor(UiTheme.withAlpha(UiTheme.ACCENT, 22));
+        g2.setColor(UiTheme.withAlpha(UiTheme.ORANGE, 22));
         g2.fillOval(-180, -220, 620, 620);
         g2.setColor(UiTheme.withAlpha(UiTheme.LEFT_COLOR, 16));
         g2.fillOval(getWidth() - 420, 160, 620, 620);
