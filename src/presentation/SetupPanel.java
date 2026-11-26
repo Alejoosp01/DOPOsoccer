@@ -54,7 +54,7 @@ public final class SetupPanel extends JPanel {
     private transient PlayerProfile player2;
 
     private final ChoiceChip pvpOption = new ChoiceChip("Jugador vs Jugador");
-    private final ChoiceChip pvmOption = new ChoiceChip("Jugador vs Maquina  (Version 2)");
+    private final ChoiceChip pvmOption = new ChoiceChip("Jugador vs Maquina");
 
     private final ChoiceChip timeOption = new ChoiceChip("Por tiempo");
     private final ChoiceChip goalsOption = new ChoiceChip("Por goles");
@@ -226,8 +226,9 @@ public final class SetupPanel extends JPanel {
         modeRow.add(pvmOption);
         modeRow.add(machineProfileBox);
         machineProfileBox.setSelectedItem(MatchConfig.DEFAULT_MACHINE.getDisplayName());
-        machineProfileBox.setVisible(pvmOption.isSelected());
-        pvmOption.addActionListener(event -> machineProfileBox.setVisible(pvmOption.isSelected()));
+        updateMachineProfileVisibility();
+        pvmOption.addActionListener(event -> updateMachineProfileVisibility());
+        pvpOption.addActionListener(event -> updateMachineProfileVisibility());
         JPanel typeRow = row();
         typeRow.add(timeOption);
         typeRow.add(goalsOption);
@@ -247,6 +248,15 @@ public final class SetupPanel extends JPanel {
         wrapper.setOpaque(false);
         wrapper.add(options);
         return wrapper;
+    }
+
+    /**
+     * Muestra el selector de perfil de la maquina solo cuando la modalidad es Jugador vs Maquina.
+     */
+    private void updateMachineProfileVisibility() {
+        machineProfileBox.setVisible(pvmOption.isSelected());
+        revalidate();
+        repaint();
     }
 
     /**
