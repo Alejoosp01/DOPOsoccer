@@ -128,10 +128,35 @@ public final class GamePanel extends JPanel implements ActionListener {
     private static final double RIBBON_TEXT_X1 = 0.82;
     private static final double RIBBON_TEXT_Y0 = 0.25;
     private static final double RIBBON_TEXT_Y1 = 0.58;
-    private static final int BAR_W = 330;
-    private static final int BAR_H = 18;
-    private static final int BADGE_W = 28;
-    private static final int BADGE_H = 30;
+    /** Zona interior de la pista de life_bar.png (623x128) y de power_bar.png (623x145), medida del arte. */
+    private static final double LIFE_FILL_X0 = 0.224;
+    private static final double LIFE_FILL_X1 = 0.942;
+    private static final double LIFE_FILL_Y0 = 0.383;
+    private static final double LIFE_FILL_Y1 = 0.820;
+    private static final double POWER_FILL_X0 = 0.188;
+    private static final double POWER_FILL_X1 = 0.937;
+    private static final double POWER_FILL_Y0 = 0.228;
+    private static final double POWER_FILL_Y1 = 0.614;
+    /** Margen transparente superior y fraccion visible de alto de cada imagen de barra. */
+    private static final double LIFE_TOP_MARGIN = 0.266;
+    private static final double LIFE_VISIBLE = 0.70;
+    private static final double POWER_TOP_MARGIN = 0.124;
+    private static final double POWER_VISIBLE = 0.676;
+    private static final int LIFE_REF_H = 34;
+    private static final int POWER_REF_H = 38;
+    private static final int HUD_BARS_REF_H = 52;
+    private static final int HUD_MARGIN = 3;
+    private static final int HUD_SIDE = 36;
+    private static final int HUD_PANEL_W = 372;
+    private static final int HUD_PAD = 12;
+    private static final int HUD_SHADOW = 3;
+    private static final int HUD_HEADER_H = 12;
+    private static final int HUD_HEADER_BASE = 15;
+    private static final int HUD_GAP = 8;
+    private static final int HUD_FALLBACK_BAR_W = 150;
+    private static final int HUD_FALLBACK_BAR_H = 14;
+    private static final int BADGE_W = 22;
+    private static final int BADGE_H = 24;
     private static final int VIEW_HEIGHT = 720;
 
     private final transient DOPOSoccer session;
@@ -1648,26 +1673,25 @@ public final class GamePanel extends JPanel implements ActionListener {
     }
 
     /**
-     * Dibuja una barra redondeada con su relleno (0 a 1) y un texto centrado.
+     * Dibuja una barra redondeada de respaldo con su relleno (0 a 1), sin texto.
      */
-    private void drawBar(Graphics2D g2, int x, int y, int width, double fill, Color color,
-                         String text, Color textColor) {
-        int height = 18;
-        g2.setColor(UiTheme.withAlpha(UiTheme.PANEL, 230));
-        g2.fill(new RoundRectangle2D.Double(x, y, width, height, 12, 12));
-        g2.setColor(UiTheme.withAlpha(UiTheme.BORDER, 230));
-        g2.setStroke(new BasicStroke(1.5f));
-        g2.draw(new RoundRectangle2D.Double(x, y, width, height, 12, 12));
+    private void drawBar(Graphics2D g2, int x, int y, int width, double fill, Color color) {
+        int height = HUD_FALLBACK_BAR_H;
+        RoundRectangle2D shape = new RoundRectangle2D.Double(x, y, width, height, height, height);
+        g2.setColor(UiTheme.NAVY_DARK);
+        g2.fill(shape);
         double amount = Math.max(0, Math.min(1, fill));
         if (amount > 0) {
-            g2.setPaint(new GradientPaint((float) x, 0, UiTheme.darken(color, 0.18f),
-                    (float) (x + width), 0, UiTheme.lighten(color, 0.25f)));
-            g2.fill(new RoundRectangle2D.Double(x + 2, y + 2, Math.max(4, (width - 4) * amount),
-                    height - 4, 9, 9));
+            Shape oldClip = g2.getClip();
+            g2.clip(shape);
+            g2.setPaint(new GradientPaint(0, y, UiTheme.lighten(color, 0.3f),
+                    0, y + height, UiTheme.darken(color, 0.25f)));
+            g2.fill(new Rectangle2D.Double(x, y, width * amount, height));
+            g2.setClip(oldClip);
         }
-        g2.setFont(UiTheme.font(Font.BOLD, 11));
-        g2.setColor(textColor);
-        drawCentered(g2, text, x + width / 2, y + 13);
+        g2.setColor(UiTheme.ORANGE_DARK);
+        g2.setStroke(new BasicStroke(1.5f));
+        g2.draw(shape);
     }
 
     /**
@@ -1724,13 +1748,16 @@ public final class GamePanel extends JPanel implements ActionListener {
         } else {
             text = "JUGADOR VS MAQUINA";
         }
-        g2.setFont(UiTheme.font(Font.BOLD, 13));
-        g2.setColor(UiTheme.TEXT);
-        drawCentered(g2, text, VIEW_WIDTH / 2, 678);
+        int ground = (int) session.getMatch().getField().getGroundY();
+        int middle = ground + (VIEW_HEIGHT - ground) / 2;
+        g2.setFont(UiTheme.font(Font.BOLD, 14));
+        int x = VIEW_WIDTH / 2 - g2.getFontMetrics().stringWidth(text) / 2;
+        UiTheme.drawShadowedText(g2, text, x, middle - 4, UiTheme.GOLD_LIGHT);
         if (!session.isFinished()) {
+            String keys = "ESC pausa  |  T terminar  |  M menu";
             g2.setFont(UiTheme.font(Font.PLAIN, 12));
-            g2.setColor(UiTheme.MUTED);
-            drawCentered(g2, "ESC pausa  |  T terminar  |  M menu", VIEW_WIDTH / 2, 702);
+            x = VIEW_WIDTH / 2 - g2.getFontMetrics().stringWidth(keys) / 2;
+            UiTheme.drawShadowedText(g2, keys, x, middle + 16, UiTheme.TEXT_LIGHT);
         }
     }
 
