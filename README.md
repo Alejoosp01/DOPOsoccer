@@ -76,14 +76,23 @@ El daño final es el daño del poder multiplicado por el multiplicador de KCK de
 ## 🧰 Requisitos
 
 - JDK 21 o superior.
-- JUnit 5 (solo para las pruebas): `lib/junit-platform-console-standalone-1.14.4.jar`.
+- **Con Maven:** Maven 3.9 o superior (descarga JUnit solo).
+- **Sin Maven:** JUnit 5 ya viene en `lib/junit-platform-console-standalone-1.14.4.jar`.
 
 ## 🚀 Cómo ejecutar
 
 **VS Code:** abre la carpeta del proyecto, instala la extensión de Java y presiona `F5` con la
 configuración **DOPOSoccer** de `.vscode/launch.json`.
 
-**PowerShell**, desde la raíz del repositorio:
+**Maven**, desde la raíz del repositorio:
+
+```powershell
+mvn compile exec:java      # abre el juego
+mvn package                # genera target/doposoccer-1.0.jar
+java -jar target/doposoccer-1.0.jar
+```
+
+**PowerShell sin Maven**, desde la raíz del repositorio:
 
 ```powershell
 javac -encoding UTF-8 -d out (Get-ChildItem src -Recurse -Filter *.java | ForEach-Object { $_.FullName })
@@ -151,6 +160,16 @@ Los errores del dominio se manejan con `DOPOSoccerException`.
 
 ## 🧪 Pruebas
 
+**Con Maven:**
+
+```powershell
+mvn test
+```
+
+Los reportes quedan en `target/surefire-reports/`.
+
+**Sin Maven:**
+
 ```powershell
 javac -encoding UTF-8 -d out -cp "lib\junit-platform-console-standalone-1.14.4.jar" (Get-ChildItem src,test -Recurse -Filter *.java | ForEach-Object { $_.FullName })
 java -jar lib\junit-platform-console-standalone-1.14.4.jar execute -cp "out;resources" --scan-classpath
@@ -166,9 +185,10 @@ src/presentation/    Interfaz Swing/Java2D
 test/domain/         Pruebas del dominio (JUnit 5)
 test/presentation/   Pruebas de la interfaz que no abren ventana
 resources/           fonts, sprites y ui (imágenes del juego)
-lib/                 JUnit 5
+lib/                 JUnit 5 (para compilar sin Maven)
 docs/capturas/       Capturas de pantalla
 HeadSoccer.asta      Diagramas de Astah
+pom.xml              Construcción y pruebas con Maven
 README.md
 ```
 
